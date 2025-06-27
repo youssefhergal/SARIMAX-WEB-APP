@@ -1,0 +1,46 @@
+{
+  "name": "sarimax-web-app",
+  "version": "1.0.0",
+  "description": "Modern SARIMAX Motion Analysis Dashboard with Vite + React",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "vite preview --port 3000"
+  },
+  "dependencies": {
+    "ag-grid-community": "^34.0.0",
+    "ag-grid-react": "^34.0.0",
+    "axios": "^1.6.2",
+    "clsx": "^2.0.0",
+    "echarts": "^5.6.0",
+    "echarts-for-react": "^3.0.2",
+    "mathjs": "^12.4.3",
+    "plotly.js-dist": "^2.27.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.1"
+  },
+  "devDependencies": {
+    "@types/plotly.js": "^2.12.29",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "vite": "^5.0.8"
+  },
+  "keywords": [
+    "sarimax",
+    "motion-capture",
+    "time-series",
+    "react",
+    "vite",
+    "dashboard",
+    "bvh"
+  ],
+  "author": "SARIMAX Team",
+  "license": "MIT"
+}
