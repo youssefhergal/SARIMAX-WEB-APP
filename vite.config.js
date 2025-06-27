@@ -10,7 +10,16 @@ export default defineConfig({
   build: {
     target: 'esnext',
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: false, // Disable for production
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ['react', 'react-dom'],
+          mathjs: ['mathjs'],
+          plotly: ['plotly.js-dist']
+        }
+      }
+    }
   },
   resolve: {
     alias: {
