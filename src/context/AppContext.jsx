@@ -30,7 +30,7 @@ export function AppProvider({ children }) {
 
   const [config, setConfig] = useState({
     targetJoint: 'Hips',
-    targetAxis: 'Xrotation',
+    targetAxis: 'Yrotation',
     modelParams: {
       lags: 2,  // Start with order 2 like in your main.js
       steps: 0,  // 0 = static method, 1+ = hybrid forecasting
@@ -47,8 +47,8 @@ export function AppProvider({ children }) {
       'Spine', 'Spine1', 'Spine2', 'Spine3',
       'Hips'
     ],
-    // 3 axes (X, Y, Z rotations)
-    availableAxes: ['X_rotation', 'Y_rotation', 'Z_rotation'],
+    // 3 axes (X, Y, Z rotations) - Format to match BVH parser output
+    availableAxes: ['Xrotation', 'Yrotation', 'Zrotation'],
     trainData: { frameCount: 0, fileName: null },
     testData: { frameCount: 0, fileName: null }
   });
