@@ -458,7 +458,7 @@ function Dashboard() {
                   <div className="text-xs text-gray-500 mt-1">
                     {config.modelParams.steps === 0 ? 
                       'Static method (all real training data)' :
-                      `Hybrid: 1 real → ${config.modelParams.steps} predicted`
+                      `Hybrid: Reset with real data every ${config.modelParams.steps} step${config.modelParams.steps > 1 ? 's' : ''} to prevent noise accumulation`
                     }
                   </div>
                 </div>

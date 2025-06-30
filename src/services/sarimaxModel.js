@@ -7,6 +7,8 @@ import { StandardScaler } from './classes/StandardScaler.js';
 import { MSE, MAE, UTheil, calculateCorrelation, createModelSummary } from './utils/metrics.js';
 import { staticForecasting } from './forecasting/staticForecasting.js';
 import { dynamicForecasting } from './forecasting/dynamicForecasting.js';
+import { hybridForecasting } from './forecasting/hybridForecasting.js';
+import { optimizedHybridForecasting } from './forecasting/optimizedHybridForecasting.js';
 
 // Main SARIMAX Analyzer class
 export class SARIMAXAnalyzer {
@@ -203,25 +205,59 @@ export class SARIMAXAnalyzer {
       // Step 7: Generate predictions using your forecasting functions
       if (progressCallback) progressCallback(80, 'Generating forecasts...');
       
-      console.log('🔄 Running static forecasting...');
-      const staticResults = staticForecasting(
-        this.model, 
-        normalizedTestData, 
-        targetIndex, 
-        exogIndices, 
-        this.scaler, 
-        targetIndex
-      );
-      
-      if (!staticResults || !staticResults.predStatic || !staticResults.origValues) {
-        throw new Error('Invalid static forecasting results');
+      let mainResults;
+      if (config.steps === 0) {
+        console.log('🔄 Running static forecasting (steps=0)...');
+        const staticResults = staticForecasting(
+          this.model, 
+          normalizedTestData, 
+          targetIndex, 
+          exogIndices, 
+          this.scaler, 
+          targetIndex
+        );
+        
+        if (!staticResults || !staticResults.predStatic || !staticResults.origValues) {
+          throw new Error('Invalid static forecasting results');
+        }
+        
+        if (!Array.isArray(staticResults.predStatic) || staticResults.predStatic.length === 0) {
+          throw new Error(`Invalid static predictions: ${typeof staticResults.predStatic}, length: ${staticResults.predStatic?.length}`);
+        }
+        
+        mainResults = {
+          predicted: staticResults.predStatic,
+          origValues: staticResults.origValues
+        };
+        
+        console.log(`✅ Static forecasting completed: ${staticResults.predStatic.length} predictions`);
+      } else {
+        console.log(`🔄 Running optimized hybrid forecasting (steps=${config.steps})...`);
+        const hybridResults = optimizedHybridForecasting(
+          this.model, 
+          normalizedTestData, 
+          targetIndex, 
+          exogIndices, 
+          this.scaler, 
+          targetIndex,
+          config.steps
+        );
+        
+        if (!hybridResults || !hybridResults.predHybrid || !hybridResults.origValues) {
+          throw new Error('Invalid hybrid forecasting results');
+        }
+        
+        if (!Array.isArray(hybridResults.predHybrid) || hybridResults.predHybrid.length === 0) {
+          throw new Error(`Invalid hybrid predictions: ${typeof hybridResults.predHybrid}, length: ${hybridResults.predHybrid?.length}`);
+        }
+        
+        mainResults = {
+          predicted: hybridResults.predHybrid,
+          origValues: hybridResults.origValues
+        };
+        
+        console.log(`✅ Hybrid forecasting completed: ${hybridResults.predHybrid.length} predictions`);
       }
-      
-      if (!Array.isArray(staticResults.predStatic) || staticResults.predStatic.length === 0) {
-        throw new Error(`Invalid static predictions: ${typeof staticResults.predStatic}, length: ${staticResults.predStatic?.length}`);
-      }
-      
-      console.log(`✅ Static forecasting completed: ${staticResults.predStatic.length} predictions`);
       
       let dynamicResults = null;
       if (config.enableDynamic) {
@@ -240,15 +276,15 @@ export class SARIMAXAnalyzer {
       // Step 8: Calculate metrics using your functions
       if (progressCallback) progressCallback(95, 'Calculating metrics...');
       
-      console.log('🔄 Calculating static metrics...');
-      const staticMetrics = {
-        mse: MSE(staticResults.origValues, staticResults.predStatic),
-        mae: MAE(staticResults.origValues, staticResults.predStatic),
-        uTheil: UTheil(staticResults.origValues, staticResults.predStatic),
-        correlation: calculateCorrelation(staticResults.origValues, staticResults.predStatic)
+      console.log(`🔄 Calculating main metrics (${config.steps === 0 ? 'static' : 'hybrid'})...`);
+      const mainMetrics = {
+        mse: MSE(mainResults.origValues, mainResults.predicted),
+        mae: MAE(mainResults.origValues, mainResults.predicted),
+        uTheil: UTheil(mainResults.origValues, mainResults.predicted),
+        correlation: calculateCorrelation(mainResults.origValues, mainResults.predicted)
       };
       
-      console.log(`📊 Static metrics: MSE=${staticMetrics.mse.toFixed(6)}, MAE=${staticMetrics.mae.toFixed(6)}`);
+      console.log(`📊 Main metrics: MSE=${mainMetrics.mse.toFixed(6)}, MAE=${mainMetrics.mae.toFixed(6)}`);
       
       const dynamicMetrics = dynamicResults ? {
         mse: MSE(dynamicResults.origValues, dynamicResults.predDynamic),
@@ -262,26 +298,35 @@ export class SARIMAXAnalyzer {
       
       // Calculate confidence intervals based on MSE
       const confidenceMultiplier = 1.96; // 95% confidence
-      const confidenceInterval = Math.sqrt(staticMetrics.mse) * confidenceMultiplier;
+      const confidenceInterval = Math.sqrt(mainMetrics.mse) * confidenceMultiplier;
       
       console.log('🔄 Compiling final results...');
+      
+      // Fix time alignment: frames should start from model.order, not 1
+      // Since predictions start from frame model.order (e.g., if lags=2, start from frame 2)
+      const startFrame = this.model.order;
+      
+      console.log(`🎯 Frame alignment: predictions start from frame ${startFrame} (model order=${this.model.order})`);
+      
       this.results = {
         targetJoint: config.targetJoint,
         targetAxis: config.targetAxis,
-        frames: Array.from({ length: staticResults.origValues.length }, (_, i) => i + 1),
-        original: staticResults.origValues,
-        predicted: staticResults.predStatic,
-        confidence_upper: staticResults.predStatic.map(val => val + confidenceInterval),
-        confidence_lower: staticResults.predStatic.map(val => val - confidenceInterval),
+        steps: config.steps,
+        frames: Array.from({ length: mainResults.origValues.length }, (_, i) => startFrame + i),
+        original: mainResults.origValues,
+        predicted: mainResults.predicted,
+        confidence_upper: mainResults.predicted.map(val => val + confidenceInterval),
+        confidence_lower: mainResults.predicted.map(val => val - confidenceInterval),
         metrics: {
-          static: staticMetrics,
+          static: mainMetrics, // Keep the name 'static' for UI compatibility
           dynamic: dynamicMetrics
         },
         modelSummary: this.formatModelSummary(modelSummaryData, bvhAngles, exogIndices)
       };
 
       console.log('🎉 Analysis completed successfully!');
-      console.log(`📊 Final metrics: MSE=${staticMetrics.mse.toFixed(6)}, MAE=${staticMetrics.mae.toFixed(6)}, U-Theil=${staticMetrics.uTheil.toFixed(6)}, Correlation=${staticMetrics.correlation.toFixed(4)}`);
+      console.log(`📊 Forecasting method: ${config.steps === 0 ? 'Static (all real data)' : `Hybrid (steps=${config.steps})`}`);
+      console.log(`📊 Final metrics: MSE=${mainMetrics.mse.toFixed(6)}, MAE=${mainMetrics.mae.toFixed(6)}, U-Theil=${mainMetrics.uTheil.toFixed(6)}, Correlation=${mainMetrics.correlation.toFixed(4)}`);
 
       return { success: true, data: this.results };
 
