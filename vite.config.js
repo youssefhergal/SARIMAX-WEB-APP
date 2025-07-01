@@ -16,7 +16,7 @@ export default defineConfig({
         manualChunks: {
           vendor: ['react', 'react-dom'],
           mathjs: ['mathjs'],
-          plotly: ['plotly.js-dist']
+          echarts: ['echarts', 'echarts-for-react']
         }
       }
     }

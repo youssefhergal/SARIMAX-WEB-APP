@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
 /* Custom base styles */
 @layer base {
@@ -40,15 +40,21 @@
   }
   
   .btn-primary {
-    @apply bg-gradient-to-r from-gradient-start to-gradient-end text-white font-medium px-6 py-3 rounded-lg shadow-medium hover:shadow-strong transition-all duration-300 transform hover:-translate-y-0.5 active:translate-y-0;
+    @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white font-medium py-2 px-4 rounded-lg;
+    @apply hover:from-blue-600 hover:to-purple-700 transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2;
   }
   
   .btn-secondary {
-    @apply bg-white/80 backdrop-blur-sm text-gray-700 font-medium px-6 py-3 rounded-lg border border-gray-200 shadow-soft hover:shadow-medium transition-all duration-300;
+    @apply bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg;
+    @apply hover:bg-gray-300 transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2;
   }
   
   .input-field {
-    @apply w-full px-4 py-3 rounded-lg border border-gray-200 bg-white/80 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-gradient-start/50 focus:border-gradient-start transition-all duration-200;
+    @apply w-full px-3 py-2 border border-gray-300 rounded-md;
+    @apply focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply transition-colors duration-200;
   }
   
   .sidebar {
@@ -76,15 +82,16 @@
   }
   
   .metric-card {
-    @apply card p-6 text-center space-y-2;
+    @apply bg-white p-4 rounded-lg border border-gray-200;
+    @apply hover:shadow-md transition-shadow duration-200;
   }
   
   .metric-label {
-    @apply text-sm font-medium text-gray-600;
+    @apply text-sm text-gray-600 font-medium;
   }
   
   .metric-value {
-    @apply text-2xl font-bold text-gray-900;
+    @apply text-2xl font-bold text-gray-900 mt-1;
   }
   
   .metric-value.good {
@@ -100,19 +107,22 @@
   }
   
   .progress-bar {
-    @apply w-full h-2 bg-gray-200 rounded-full overflow-hidden;
+    @apply w-full bg-gray-200 rounded-full h-2;
   }
   
   .progress-fill {
-    @apply h-full bg-gradient-to-r from-gradient-start to-gradient-end transition-all duration-300 ease-out;
+    @apply bg-gradient-to-r from-blue-500 to-purple-600 h-2 rounded-full;
+    @apply transition-all duration-300 ease-out;
   }
   
   .file-upload-zone {
-    @apply border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gradient-start transition-colors duration-300 cursor-pointer;
+    @apply border-2 border-dashed border-gray-300 rounded-lg p-6;
+    @apply hover:border-blue-400 transition-colors duration-200;
+    @apply cursor-pointer bg-gray-50 hover:bg-gray-100;
   }
   
   .file-upload-zone.dragover {
-    @apply border-gradient-start bg-gradient-start/5;
+    @apply border-blue-500 bg-blue-50;
   }
   
   .plot-container {
@@ -144,35 +154,75 @@
   }
 }
 
-/* Plotly.js custom styles */
-.js-plotly-plot .plotly .modebar {
-  @apply bg-white/90 backdrop-blur-sm rounded-lg shadow-soft border border-gray-100;
-}
-
-.js-plotly-plot .plotly .modebar-btn {
-  @apply text-gray-600 hover:text-gradient-start;
-}
-
-/* File input custom styles */
-input[type="file"] {
-  @apply file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-gradient-to-r file:from-gradient-start file:to-gradient-end file:text-white hover:file:shadow-medium file:transition-all file:duration-300;
-}
-
-/* Custom scrollbar for webkit browsers */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-gray-100;
+  background: #f1f1f1;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-gray-300 rounded-full;
+  background: #c1c1c1;
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-gray-400;
+  background: #a8a8a8;
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Table styles */
+.table-auto {
+  @apply w-full border-collapse;
+}
+
+.table-auto th {
+  @apply bg-gray-50 border border-gray-200 px-4 py-2 text-left font-semibold text-gray-700;
+}
+
+.table-auto td {
+  @apply border border-gray-200 px-4 py-2 text-gray-600;
+}
+
+/* Loading spinner */
+.spinner {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Card components */
+.card-header {
+  @apply px-6 py-4 border-b border-gray-200;
+}
+
+.card-body {
+  @apply px-6 py-4;
 }
 
 /* AG Grid Custom Styles */
