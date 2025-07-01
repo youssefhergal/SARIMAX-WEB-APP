@@ -219,12 +219,11 @@ export function AppProvider({ children }) {
             isAnalyzing: false,
             progress: 100,
             currentStep: 'Analysis complete!',
-            results: result.data
+            results: result.results
           }));
           
           return { success: true, message: 'Analysis completed successfully!' };
         } else {
-          console.error('❌ Analysis failed:', result.error);
           setAnalysisState(prev => ({
             ...prev,
             isAnalyzing: false,

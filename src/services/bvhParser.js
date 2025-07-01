@@ -145,14 +145,6 @@ export function prepareForSARIMAX(parsedData, targetAngle, exogAngles = null) {
   }
 
   try {
-    console.log(`🎯 Preparing SARIMAX data for: ${targetAngle}`);
-    console.log(`📊 ParsedData structure:`, {
-      frameCount: parsedData?.frameCount,
-      channels: parsedData?.channels?.length,
-      motionData: parsedData?.motionData?.length,
-      joints: parsedData?.joints?.length
-    });
-    
     // Robust validation
     if (!parsedData) {
       throw new Error('ParsedData is null or undefined');
@@ -170,30 +162,20 @@ export function prepareForSARIMAX(parsedData, targetAngle, exogAngles = null) {
       throw new Error('Motion data is empty');
     }
     
-    console.log(`📊 Available channels: ${parsedData.channels.length}`);
-    console.log(`📋 First 10 channels: [${parsedData.channels.slice(0, 10).join(', ')}]`);
-    
     // Find target angle index
     const targetIndex = parsedData.channels.findIndex(ch => ch === targetAngle);
     if (targetIndex === -1) {
-      console.log('❌ Available channels:', parsedData.channels.slice(0, 20));
       throw new Error(`Target angle "${targetAngle}" not found in parsed data`);
     }
     
     // Find exogenous angles indices
-    console.log(`🔍 Looking for ${exogAngles.length} exogenous angles...`);
     const exogIndices = exogAngles.map(angle => {
       const index = parsedData.channels.findIndex(ch => ch === angle);
       if (index === -1) {
-        console.warn(`⚠️ Exogenous angle "${angle}" not found, using zeros`);
         return -1;
       }
       return index;
     });
-    
-    const foundExogCount = exogIndices.filter(i => i !== -1).length;
-    console.log(`✅ Target "${targetAngle}" found at index: ${targetIndex}`);
-    console.log(`✅ Found ${foundExogCount}/${exogAngles.length} exogenous variables`);
     
     // Validate motion data structure
     if (!parsedData.motionData[0] || !Array.isArray(parsedData.motionData[0])) {
@@ -201,7 +183,6 @@ export function prepareForSARIMAX(parsedData, targetAngle, exogAngles = null) {
     }
     
     const frameSize = parsedData.motionData[0].length;
-    console.log(`📊 Frame size: ${frameSize}, Target index: ${targetIndex}`);
     
     if (targetIndex >= frameSize) {
       throw new Error(`Target index ${targetIndex} is out of bounds for frame size ${frameSize}`);
@@ -226,20 +207,11 @@ export function prepareForSARIMAX(parsedData, targetAngle, exogAngles = null) {
       return exogIndices.map(idx => {
         if (idx === -1) return 0;
         if (idx >= frame.length) {
-          console.warn(`⚠️ Frame ${frameIndex}: exog index ${idx} out of bounds (${frame.length}), using 0`);
           return 0;
         }
         return frame[idx] || 0;
       });
     });
-    
-    // Verify data quality
-    const validEndog = endog.filter(val => !isNaN(val) && isFinite(val));
-    const validExog = exog.filter(row => row && Array.isArray(row) && row.every(val => !isNaN(val) && isFinite(val)));
-    
-    if (validEndog.length !== parsedData.frameCount || validExog.length !== parsedData.frameCount) {
-      console.warn(`⚠️ Some invalid data found. Valid endog: ${validEndog.length}/${parsedData.frameCount}, Valid exog: ${validExog.length}/${parsedData.frameCount}`);
-    }
     
     if (endog.length === 0) {
       throw new Error('No endogenous data extracted');
@@ -253,12 +225,6 @@ export function prepareForSARIMAX(parsedData, targetAngle, exogAngles = null) {
       throw new Error('No exogenous variables extracted');
     }
     
-    console.log(`✅ SARIMAX data prepared:
-      📈 Endogenous values: ${endog.length} frames
-      📊 Exogenous values: ${exog.length} frames x ${exog[0].length} variables
-      📋 Sample endogenous: [${endog.slice(0, 5).map(v => v.toFixed(3)).join(', ')}...]
-      📋 Sample exogenous: [${exog[0].slice(0, 5).map(v => v.toFixed(3)).join(', ')}...]`);
-    
     return {
       endog,
       exog,
@@ -268,8 +234,7 @@ export function prepareForSARIMAX(parsedData, targetAngle, exogAngles = null) {
     };
     
   } catch (error) {
-    console.error('❌ Error preparing SARIMAX data:', error.message);
-    console.error('❌ ParsedData:', parsedData);
+    console.error('Error preparing SARIMAX data:', error.message);
     throw error;
   }
 }
@@ -304,12 +269,7 @@ export class BVHParser {
   }
 
   parseBVH(content) {
-    console.log('🔄 Starting BVH parsing...');
-    console.log(`📄 Content length: ${content.length} characters`);
-    
     const lines = content.split('\n').map(line => line.trim()).filter(line => line);
-    console.log(`📋 Total lines after cleanup: ${lines.length}`);
-    console.log(`📋 First 10 lines:`, lines.slice(0, 10));
     
     // Reset all data
     this.joints = [];
@@ -321,29 +281,15 @@ export class BVHParser {
     
     let currentLine = 0;
     
-    // Parse HIERARCHY section (this will populate channels)
-    console.log('🔄 Starting hierarchy parsing...');
+    // Parse HIERARCHY section
     const hierarchyResult = this.parseHierarchy(lines, currentLine);
     currentLine = hierarchyResult.nextLine;
     
-    console.log(`✅ Hierarchy parsing completed. Current line: ${currentLine}`);
-    
     // Parse MOTION section
-    console.log('🔄 Starting motion parsing...');
     const motionResult = this.parseMotion(lines, currentLine);
     
-    console.log(`✅ Motion parsing completed`);
-    
-    // Extract Euler angles using your method
-    console.log('🔄 Extracting Euler angles...');
+    // Extract Euler angles
     this.eulerAngles = this.extractEulerAnglesFromMotion();
-    
-    console.log(`✅ BVH parsing completed successfully:`);
-    console.log(`   🦴 Joints: ${this.joints.length}`);
-    console.log(`   📊 Channels: ${this.channels.length}`);
-    console.log(`   🎬 Frames: ${this.frameCount}`);
-    console.log(`   ⏱️ Frame time: ${this.frameTime}`);
-    console.log(`   📐 Euler angles: ${Object.keys(this.eulerAngles).length}`);
     
     return {
       joints: this.joints,
@@ -360,19 +306,15 @@ export class BVHParser {
     let currentLine = startLine;
     this.joints = [];
     
-    console.log(`🔄 Parsing hierarchy starting at line ${startLine}`);
-    console.log(`📋 Total lines available: ${lines.length}`);
-    
     let jointCount = 0;
     let inJointDefinition = false;
     let currentJoint = null;
     
     while (currentLine < lines.length && !lines[currentLine].startsWith('MOTION')) {
       const line = lines[currentLine];
-      console.log(`📋 Line ${currentLine}: "${line}"`);
       
       if (line.startsWith('HIERARCHY')) {
-        console.log('📋 Found HIERARCHY section');
+        // Found HIERARCHY section
       } else if (line.startsWith('ROOT') || line.startsWith('JOINT')) {
         const parts = line.split(/\s+/);
         if (parts.length >= 2) {
@@ -380,48 +322,33 @@ export class BVHParser {
           this.joints.push(jointName);
           currentJoint = jointName;
           jointCount++;
-          console.log(`🦴 Joint ${jointCount}: ${jointName}`);
           inJointDefinition = true;
-        } else {
-          console.warn(`⚠️ Invalid joint line: "${line}"`);
         }
-      } else if (line.startsWith('CHANNELS') && currentJoint) {
+      } else if (line.startsWith('CHANNELS')) {
         const parts = line.split(/\s+/);
         if (parts.length >= 2) {
           const channelCount = parseInt(parts[1]);
           const channelTypes = parts.slice(2, 2 + channelCount);
           
-          console.log(`📊 Joint ${currentJoint}: ${channelCount} channels [${channelTypes.join(', ')}]`);
-          
-          // Add channels to our list (this was missing in the previous version!)
+          // Add channels to our list
           channelTypes.forEach(channelType => {
             const channelName = `${currentJoint}_${channelType}`;
             if (!this.channels.includes(channelName)) {
               this.channels.push(channelName);
             }
           });
-        } else {
-          console.warn(`⚠️ Invalid CHANNELS line: "${line}"`);
         }
       } else if (line.startsWith('{')) {
-        console.log(`📂 Opening block for ${currentJoint || 'unknown'}`);
+        // Opening block
       } else if (line.startsWith('}')) {
-        console.log(`📂 Closing block for ${currentJoint || 'unknown'}`);
+        // Closing block
         inJointDefinition = false;
       } else if (line.startsWith('OFFSET')) {
-        console.log(`📐 Offset for ${currentJoint || 'unknown'}: ${line}`);
-      } else if (line.trim() !== '') {
-        console.log(`📋 Other line: "${line}"`);
+        // Offset data
       }
       
       currentLine++;
     }
-    
-    console.log(`✅ Hierarchy parsing completed:`);
-    console.log(`   🦴 Joints found: ${this.joints.length} [${this.joints.join(', ')}]`);
-    console.log(`   📊 Channels found: ${this.channels.length}`);
-    console.log(`   📋 First 10 channels: [${this.channels.slice(0, 10).join(', ')}]`);
-    console.log(`   📍 Stopped at line ${currentLine}: "${lines[currentLine] || 'END'}"`);
     
     if (this.joints.length === 0) {
       throw new Error('No joints found in HIERARCHY section');
@@ -437,9 +364,6 @@ export class BVHParser {
   parseMotion(lines, startLine) {
     let currentLine = startLine;
     
-    console.log(`🔄 Parsing motion starting at line ${startLine}`);
-    console.log(`📋 Lines around motion section:`, lines.slice(Math.max(0, startLine - 2), startLine + 5));
-    
     // Skip "MOTION" line
     if (lines[currentLine] && lines[currentLine].startsWith('MOTION')) {
       currentLine++;
@@ -451,7 +375,6 @@ export class BVHParser {
     }
     
     const framesLine = lines[currentLine];
-    console.log(`📋 Frames line: "${framesLine}"`);
     
     if (!framesLine.startsWith('Frames:')) {
       throw new Error(`Expected "Frames:" but got: "${framesLine}"`);
@@ -462,7 +385,6 @@ export class BVHParser {
       throw new Error(`Invalid frame count: ${this.frameCount}`);
     }
     
-    console.log(`📊 Frame count: ${this.frameCount}`);
     currentLine++;
     
     // Parse frame time
@@ -471,7 +393,6 @@ export class BVHParser {
     }
     
     const frameTimeLine = lines[currentLine];
-    console.log(`📋 Frame time line: "${frameTimeLine}"`);
     
     if (!frameTimeLine.startsWith('Frame Time:')) {
       throw new Error(`Expected "Frame Time:" but got: "${frameTimeLine}"`);
@@ -482,21 +403,17 @@ export class BVHParser {
       throw new Error(`Invalid frame time: ${this.frameTime}`);
     }
     
-    console.log(`⏱️ Frame time: ${this.frameTime}`);
     currentLine++;
     
     // Parse motion data
     this.motionData = [];
     const motionStartLine = currentLine;
-    console.log(`🔄 Starting to parse motion data from line ${motionStartLine}`);
-    console.log(`📋 Expected ${this.frameCount} frames, available lines: ${lines.length - motionStartLine}`);
     
     let parsedFrames = 0;
     for (let i = currentLine; i < lines.length && parsedFrames < this.frameCount; i++) {
       const line = lines[i];
       
       if (!line || line.trim() === '') {
-        console.log(`⚠️ Skipping empty line ${i}`);
         continue;
       }
       
@@ -504,7 +421,6 @@ export class BVHParser {
       const values = line.trim().split(/\s+/).map(val => {
         const parsed = parseFloat(val);
         if (isNaN(parsed)) {
-          console.warn(`⚠️ Non-numeric value "${val}" in line ${i}, using 0`);
           return 0;
         }
         return parsed;
@@ -513,50 +429,11 @@ export class BVHParser {
       if (values.length > 0) {
         this.motionData.push(values);
         parsedFrames++;
-        
-        if (parsedFrames <= 3 || parsedFrames === this.frameCount) {
-          console.log(`📋 Frame ${parsedFrames}: ${values.length} values [${values.slice(0, 5).map(v => v.toFixed(2)).join(', ')}...]`);
-        }
-      } else {
-        console.warn(`⚠️ Empty values array for line ${i}: "${line}"`);
       }
     }
-    
-    console.log(`✅ Motion parsing completed: ${this.motionData.length} frames parsed`);
     
     if (this.motionData.length === 0) {
-      console.error('❌ No motion data was parsed!');
-      console.error('📋 Motion section lines:', lines.slice(motionStartLine, motionStartLine + 10));
       throw new Error(`No motion data could be parsed. Expected ${this.frameCount} frames starting from line ${motionStartLine}`);
-    }
-    
-    if (this.motionData.length !== this.frameCount) {
-      console.warn(`⚠️ Frame count mismatch: expected ${this.frameCount}, got ${this.motionData.length}`);
-    }
-    
-    // Validate that all frames have the same number of channels
-    const expectedChannels = this.channels.length;
-    const firstFrameSize = this.motionData[0]?.length;
-    
-    console.log(`📊 Validation: Expected ${expectedChannels} channels, first frame has ${firstFrameSize} values`);
-    
-    if (firstFrameSize !== expectedChannels) {
-      console.warn(`⚠️ Channel count mismatch: expected ${expectedChannels}, first frame has ${firstFrameSize}`);
-    }
-    
-    // Check for inconsistent frame sizes
-    let inconsistentFrames = 0;
-    for (let i = 0; i < this.motionData.length; i++) {
-      if (this.motionData[i].length !== firstFrameSize) {
-        inconsistentFrames++;
-        if (inconsistentFrames <= 5) {
-          console.warn(`⚠️ Frame ${i} has ${this.motionData[i].length} values instead of ${firstFrameSize}`);
-        }
-      }
-    }
-    
-    if (inconsistentFrames > 0) {
-      console.warn(`⚠️ Found ${inconsistentFrames} frames with inconsistent sizes`);
     }
     
     return { success: true };

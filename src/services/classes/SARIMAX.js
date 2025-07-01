@@ -188,6 +188,21 @@ export class SARIMAX {
     return tempModel;
   }
 
+  predict(endoContext, exogContext) {
+    if (!this.trained) throw new Error("Model not trained");
+    
+    // Combine exogenous and endogenous data in the correct order
+    // The coefficients are ordered as: [exog1, exog2, ..., endog_lag1, endog_lag2, ...]
+    const input = [...exogContext, ...endoContext];
+    
+    if (input.length !== this.coefficients.length) {
+      throw new Error(`Input length ${input.length} doesn't match coefficient length ${this.coefficients.length}`);
+    }
+    
+    const prediction = math.dot(input, this.coefficients);
+    return prediction;
+  }
+
   predictNext(lastEndog, nextExog) {
     if (!this.trained) throw new Error("Model not trained");
     if (lastEndog.length !== this.order || nextExog.length !== this.exog[0].length)

@@ -12,20 +12,9 @@
 export function displayModelTable(model, variables, targetAngle, indExo) {
   const summary = model.summary();
   
-  console.log('\n📊 MODEL COEFFICIENTS AND STATISTICAL SIGNIFICANCE');
-  console.log('='.repeat(80));
-  
   // Create table headers
   const headers = ['Variable', 'Coefficient', 'Std Error', 'T-Statistic', 'P-Value', 'Significance'];
   const colWidths = [25, 15, 12, 12, 12, 12];
-  
-  // Print header
-  let headerLine = '';
-  headers.forEach((header, i) => {
-    headerLine += header.padEnd(colWidths[i]);
-  });
-  console.log(headerLine);
-  console.log('-'.repeat(headerLine.length));
   
   // Format and display each coefficient
   const modelData = [];
@@ -45,23 +34,6 @@ export function displayModelTable(model, variables, targetAngle, indExo) {
     else if (pVal < 0.1) significance = '.';
     else significance = '';
     
-    // Format values
-    const row = [
-      variable,
-      coef.toFixed(6),
-      stdErr.toFixed(6),
-      tStat.toFixed(3),
-      pVal.toFixed(6),
-      significance
-    ];
-    
-    // Print row
-    let rowLine = '';
-    row.forEach((cell, j) => {
-      rowLine += cell.toString().padEnd(colWidths[j]);
-    });
-    console.log(rowLine);
-    
     // Store for return
     modelData.push({
       variable,
@@ -72,16 +44,6 @@ export function displayModelTable(model, variables, targetAngle, indExo) {
       significance
     });
   }
-  
-  console.log('-'.repeat(headerLine.length));
-  console.log('\n📈 MODEL QUALITY METRICS:');
-  console.log(`R-squared: ${summary.rSquared.toFixed(6)} (${(summary.rSquared * 100).toFixed(2)}% variance explained)`);
-  console.log(`Mean Squared Error: ${summary.mse.toFixed(6)}`);
-  console.log(`AIC: ${summary.aic.toFixed(3)}`);
-  console.log(`BIC: ${summary.bic.toFixed(3)}`);
-  
-  console.log('\n🎯 SIGNIFICANCE CODES:');
-  console.log("0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1");
   
   return {
     targetVariable: targetAngle,
@@ -344,4 +306,80 @@ export function createHTMLTable(modelTable) {
 </style>`;
   
   return html;
+}
+
+export function printModelSummary(summary) {
+  if (!summary || !summary.variables) {
+    return;
+  }
+
+  // Format model summary for console output if needed in development
+  const headerFields = ['Variable', 'Coeff', 'P-value', 'Sig'];
+  const colWidths = [20, 12, 12, 5];
+  
+  let headerLine = '';
+  headerFields.forEach((field, i) => {
+    headerLine += field.padEnd(colWidths[i]);
+  });
+  
+  // Print variables
+  summary.variables.forEach(variable => {
+    const coeff = variable.coefficient?.toFixed(6) || '0.000000';
+    const pValue = variable.pValue?.toFixed(6) || '1.000000';
+    const sig = variable.significance || '';
+    
+    const values = [
+      variable.variable || 'unknown',
+      coeff,
+      pValue,
+      sig
+    ];
+    
+    let rowLine = '';
+    values.forEach((value, i) => {
+      if (i === 0) {
+        rowLine += value.toString().substring(0, colWidths[i]).padEnd(colWidths[i]);
+      } else if (i === colWidths.length - 1) {
+        rowLine += value.toString().padStart(colWidths[i]);
+      } else {
+        rowLine += value.toString().padStart(colWidths[i]);
+      }
+    });
+  });
+}
+
+export function printDataFrame(n = 10) {
+  if (!this.data || this.data.length === 0) {
+    return;
+  }
+
+  const modelTable = this.createModelTable();
+  
+  // Print headers
+  const endogHeader = `${modelTable.targetVariable} (Target)`;
+  const exogHeaders = modelTable.exogVariables.map(v => `${v} (Exog)`);
+  const headers = [endogHeader, ...exogHeaders];
+  
+  const header = headers.map(h => h.substring(0, 12).padStart(12)).join(' | ');
+  
+  // Print data rows
+  for (let i = 0; i < Math.min(n, this.data.length); i++) {
+    const row = this.data[i];
+    const formattedRow = row.map(val => {
+      if (typeof val === 'number') {
+        return val.toFixed(4).padStart(12);
+      }
+      return val.toString().substring(0, 12).padStart(12);
+    });
+    const line = formattedRow.join(' | ');
+  }
+
+  if (this.data.length > n) {
+    // Indicate more rows exist
+  }
+
+  // Print summary statistics
+  const coeffs = this.data.map(row => row[0]).filter(val => typeof val === 'number');
+  const pVals = this.pValues || [];
+  const significantCount = pVals.filter(p => p < 0.05).length;
 } 

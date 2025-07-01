@@ -1,110 +1,126 @@
 // Flexible forecasting function - Static OR Dynamic based on steps parameter
-export function staticForecasting(model, testData, indEnd, indExo, scaler, targetAngleIndex, steps = 1) {
-  const nob = testData.length;
-  const endoData = testData.map(row => row[indEnd]);
-  const exogData = testData.map(row => indExo.map(idx => row[idx]));
-  
-  const predictions = [];
-  const originals = [];
-  const frameIndices = [];
-  
-  console.log(`🔄 FORECASTING METHOD: ${steps <= 1 ? 'STATIC' : 'DYNAMIC'} (steps=${steps})`);
-  console.log(`   Model order: ${model.order}, Test data length: ${nob}`);
+export function staticForecasting(model, nobs, targetIndex, exogIndices, scaler, targetColumn, steps = 1) {
+  const nob = nobs.length;
   
   if (steps <= 1) {
-    // ===== STATIC FORECASTING (steps = 0 or 1) =====
-    console.log(`📊 Using STATIC forecasting (real data for all predictions)`);
+    // Static forecasting: Always use real data for prediction
+    const staticPreds = [];
+    const staticOriginals = [];
+    const frameIndices = [];
     
     for (let i = model.order; i < nob; i++) {
-      const forecast = model.apply(
-        endoData.slice(i - model.order, i),  // Real endogenous data
-        exogData.slice(i - model.order, i)   // Real exogenous data
-      );
-      predictions.push(forecast.getPrediction().predicted_mean[0]);
-      originals.push(endoData[i]);
+      const endoContext = [];
+      const exogContext = [];
+      
+      // Get lagged endogenous values (real data)
+      for (let lag = model.order; lag >= 1; lag--) {
+        const lagIndex = i - lag;
+        endoContext.push(nobs[lagIndex][targetIndex]);
+      }
+      
+      // Get current exogenous values (real data)
+      for (let exogIdx of exogIndices) {
+        exogContext.push(nobs[i][exogIdx]);
+      }
+      
+      // Make prediction using model
+      const prediction = model.predict(endoContext, exogContext);
+      
+      staticPreds.push(prediction);
+      staticOriginals.push(nobs[i][targetIndex]);
       frameIndices.push(i);
     }
     
+    // Denormalize predictions and originals
+    const denormalizedPred = staticPreds.map(val => scaler.inverseTransform([[val]])[0][0]);
+    const denormalizedOrig = staticOriginals.map(val => scaler.inverseTransform([[val]])[0][0]);
+    
+    return {
+      predStatic: denormalizedPred,
+      origValues: denormalizedOrig,
+      frameIndices: frameIndices,
+      method: 'static',
+      steps: 1
+    };
   } else {
-    // ===== DYNAMIC FORECASTING (steps >= 2) =====
-    console.log(`🔄 Using DYNAMIC forecasting (predicted data for multi-step)`);
+    // Dynamic forecasting: Use predicted data for multi-step ahead
+    const dynamicPreds = [];
+    const dynamicOriginals = [];
+    const frameIndices = [];
     
     const maxCycles = Math.floor((nob - model.order) / steps);
-    console.log(`   Max cycles: ${maxCycles}, Steps per cycle: ${steps}`);
     
     for (let cycle = 0; cycle < maxCycles; cycle++) {
       const startFrame = cycle * steps;
-      const contextStart = startFrame;
       
-      // Start with REAL DATA context
-      let endoContext = endoData.slice(contextStart, contextStart + model.order);
-      let exogContext = exogData.slice(contextStart, contextStart + model.order);
+      // Initial context from real data
+      let endoContext = [];
+      for (let lag = model.order; lag >= 1; lag--) {
+        const lagIndex = startFrame + model.order - lag;
+        endoContext.push(nobs[lagIndex][targetIndex]);
+      }
       
-      console.log(`\n--- CYCLE ${cycle} (frames ${startFrame + model.order} to ${startFrame + model.order + steps - 1}) ---`);
-      console.log(`   Initial context (REAL): endo[${endoContext.map(x => x.toFixed(3)).join(', ')}]`);
-      
-      // Make 'steps' predictions using sliding window
+      // Multi-step prediction within this cycle
       for (let step = 0; step < steps; step++) {
         const targetFrame = startFrame + model.order + step;
         
         if (targetFrame >= nob) {
-          console.log(`   ⚠️ Step ${step}: Beyond data (frame ${targetFrame} >= ${nob})`);
           break;
         }
         
-        // Use current context for prediction
-        const forecast = model.apply(endoContext, exogContext);
-        const prediction = forecast.getPrediction().predicted_mean[0];
-        
-        predictions.push(prediction);
-        originals.push(endoData[targetFrame]);
-        frameIndices.push(targetFrame);
-        
-        console.log(`   Step ${step}: context[${endoContext.map(x => x.toFixed(3)).join(', ')}] → pred=${prediction.toFixed(3)} (real=${endoData[targetFrame].toFixed(3)})`);
-        
-        // Slide the window: remove oldest, add prediction for endogenous
-        endoContext = [...endoContext.slice(1), prediction];
-        
-        // For exogenous: use real future data (this is known in static forecasting)
-        if (targetFrame + 1 < nob) {
-          exogContext = [...exogContext.slice(1), exogData[targetFrame + 1]];
+        // Get current exogenous values (real data)
+        const exogContext = [];
+        for (let exogIdx of exogIndices) {
+          exogContext.push(nobs[targetFrame][exogIdx]);
         }
         
-        console.log(`   Updated context: endo[${endoContext.map(x => x.toFixed(3)).join(', ')}]`);
+        // Make prediction
+        const prediction = model.predict(endoContext, exogContext);
+        
+        // Get real value for comparison
+        const realValue = nobs[targetFrame][targetIndex];
+        
+        dynamicPreds.push(prediction);
+        dynamicOriginals.push(realValue);
+        frameIndices.push(targetFrame);
+        
+        // Update context with predicted value for next step
+        endoContext = endoContext.slice(1).concat([prediction]);
       }
     }
     
-    // Handle remaining frames if any
+    // Handle remaining frames with static method
     const remainingStart = maxCycles * steps + model.order;
-    if (remainingStart < nob) {
-      console.log(`\n--- REMAINING FRAMES (${remainingStart} to ${nob-1}) ---`);
-      for (let i = remainingStart; i < nob; i++) {
-        const forecast = model.apply(
-          endoData.slice(i - model.order, i),
-          exogData.slice(i - model.order, i)
-        );
-        predictions.push(forecast.getPrediction().predicted_mean[0]);
-        originals.push(endoData[i]);
-        frameIndices.push(i);
+    for (let i = remainingStart; i < nob; i++) {
+      const endoContext = [];
+      const exogContext = [];
+      
+      for (let lag = model.order; lag >= 1; lag--) {
+        const lagIndex = i - lag;
+        endoContext.push(nobs[lagIndex][targetIndex]);
       }
+      
+      for (let exogIdx of exogIndices) {
+        exogContext.push(nobs[i][exogIdx]);
+      }
+      
+      const prediction = model.predict(endoContext, exogContext);
+      
+      dynamicPreds.push(prediction);
+      dynamicOriginals.push(nobs[i][targetIndex]);
+      frameIndices.push(i);
     }
+    
+    // Denormalize predictions and originals
+    const denormalizedPred = dynamicPreds.map(val => scaler.inverseTransform([[val]])[0][0]);
+    const denormalizedOrig = dynamicOriginals.map(val => scaler.inverseTransform([[val]])[0][0]);
+    
+    return {
+      predStatic: denormalizedPred,
+      origValues: denormalizedOrig,
+      frameIndices: frameIndices,
+      method: 'dynamic',
+      steps: steps
+    };
   }
-  
-  // Denormalize
-  const denormalizedPred = predictions.map(val => val * scaler.std[targetAngleIndex] + scaler.mean[targetAngleIndex]);
-  const denormalizedOrig = originals.map(val => val * scaler.std[targetAngleIndex] + scaler.mean[targetAngleIndex]);
-  
-  console.log(`\n📊 ${steps <= 1 ? 'STATIC' : 'DYNAMIC'} FORECASTING RESULTS:`);
-  console.log(`   Predictions: ${denormalizedPred.length} values`);
-  console.log(`   Originals: ${denormalizedOrig.length} values`);
-  console.log(`   Frame indices: [${frameIndices[0]}, ${frameIndices[1]}, ..., ${frameIndices[frameIndices.length-1]}]`);
-  console.log(`   Method: ${steps <= 1 ? 'Real data for all predictions' : 'Predicted data for multi-step ahead'}`);
-  
-  return { 
-    predStatic: denormalizedPred, 
-    origValues: denormalizedOrig,
-    frameIndices: frameIndices,
-    method: steps <= 1 ? 'static' : 'dynamic',
-    steps: steps
-  };
 } 

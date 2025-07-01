@@ -23,12 +23,9 @@ function Dashboard() {
   const handleTrainFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      console.log('📁 Training file selected:', file.name);
       const result = await uploadTrainFile(file);
       if (!result.success) {
         alert(result.message);
-      } else {
-        console.log('✅ Training file uploaded successfully');
       }
     }
   };
@@ -36,18 +33,14 @@ function Dashboard() {
   const handleTestFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      console.log('📁 Test file selected:', file.name);
       const result = await uploadTestFile(file);
       if (!result.success) {
         alert(result.message);
-      } else {
-        console.log('✅ Test file uploaded successfully');
       }
     }
   };
 
   const handleAnalyze = async () => {
-    console.log('🚀 Starting analysis...');
     const result = await analyzeData();
     if (!result.success) {
       alert(result.message);
@@ -78,10 +71,10 @@ function Dashboard() {
       );
     }
 
-    return (
-      <>
+        return (
+          <>
         {/* Forecasting Visualization */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
           <h3 className="text-lg font-semibold mb-4">
             {analysisState.results.method === 'static' ? '📊 Static' : '🔄 Dynamic'} Forecasting Results 
             <span className="text-sm font-normal text-gray-600 ml-2">
@@ -94,48 +87,48 @@ function Dashboard() {
               : 'Predicted data used for multi-step ahead forecasting'
             }
           </div>
-          <AnglePlot 
-            targetJoint={config.targetJoint}
-            targetAxis={config.targetAxis}
+              <AnglePlot 
+                targetJoint={config.targetJoint}
+                targetAxis={config.targetAxis}
             analysisType={analysisState.results.method}
-            realData={analysisState.results}
-          />
-        </div>
+                realData={analysisState.results}
+              />
+            </div>
 
-        {/* Model Summary Table */}
-        <div className="mb-6">
-          <ModelSummaryTable analysisResults={analysisState.results} />
-        </div>
+            {/* Model Summary Table */}
+            <div className="mb-6">
+              <ModelSummaryTable analysisResults={analysisState.results} />
+            </div>
 
-        {/* Static Metrics */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-sm text-gray-600">MSE</div>
-            <div className="text-lg font-semibold text-green-600">
+            {/* Static Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-600">MSE</div>
+                <div className="text-lg font-semibold text-green-600">
               {analysisState.results.metrics.mse.toFixed(6)}
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-sm text-gray-600">MAE</div>
-            <div className="text-lg font-semibold text-blue-600">
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-600">MAE</div>
+                <div className="text-lg font-semibold text-blue-600">
               {analysisState.results.metrics.mae.toFixed(6)}
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-sm text-gray-600">U-Theil</div>
-            <div className="text-lg font-semibold text-purple-600">
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-600">U-Theil</div>
+                <div className="text-lg font-semibold text-purple-600">
               {analysisState.results.metrics.uTheil.toFixed(6)}
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-lg border border-gray-200">
-            <div className="text-sm text-gray-600">Correlation</div>
-            <div className="text-lg font-semibold text-green-600">
+                </div>
+              </div>
+              <div className="bg-white p-4 rounded-lg border border-gray-200">
+                <div className="text-sm text-gray-600">Correlation</div>
+                <div className="text-lg font-semibold text-green-600">
               {analysisState.results.metrics.correlation.toFixed(4)}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </>
-    );
+          </>
+        );
   };
   
   return (

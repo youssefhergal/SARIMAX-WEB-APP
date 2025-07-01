@@ -1,99 +1,122 @@
-# SARIMAX Modern Web Application
+# SARIMAX Motion Analysis Web Application
 
 ## 🚀 Client-Side SARIMAX Implementation
 
-Cette application web moderne utilise **SolidJS + Vite + Tailwind CSS** et exécute **tout l'algorithme SARIMAX directement dans le navigateur** - aucun serveur backend requis !
+A modern web application built with **React + Vite + Tailwind CSS** that performs **complete SARIMAX analysis directly in the browser** - no backend server required!
 
-## ✨ Fonctionnalités
+## ✨ Features
 
-- 📁 **Upload de fichiers BVH** - Drag & drop pour fichiers d'entraînement et de test
-- ⚙️ **Configuration SARIMAX** - Paramètres p, d, q personnalisables
-- 📊 **Analyse en temps réel** - Traitement côté client avec indicateur de progression
-- 📈 **Visualisations interactives** - Graphiques Plotly.js intégrés
-- 📋 **Métriques détaillées** - MSE, MAE, U-Theil, corrélation
-- 🎨 **Interface moderne** - Design responsive avec animations
+- 📁 **BVH File Upload** - Drag & drop support for training and test files
+- ⚙️ **SARIMAX Configuration** - Customizable lags and forecasting steps
+- 📊 **Real-time Analysis** - Client-side processing with progress indicators
+- 📈 **Interactive Visualizations** - ECharts integration for beautiful plots
+- 📋 **Detailed Metrics** - MSE, MAE, U-Theil, correlation analysis
+- 🎨 **Modern Interface** - Responsive design with smooth animations
+- 🔄 **Static & Dynamic Forecasting** - Flexible forecasting methods
 
 ## 🏗️ Architecture
 
 ```
 SARIMAX WEB app/
 ├── src/
-│   ├── components/          # Composants SolidJS
-│   │   ├── Dashboard.jsx    # Layout principal
-│   │   ├── Sidebar.jsx      # Contrôles et configuration
-│   │   ├── MainContent.jsx  # Visualisations et métriques
-│   │   ├── PlotViewer.jsx   # Graphiques Plotly.js
-│   │   └── ...
+│   ├── components/          # React components
+│   │   ├── Dashboard.jsx    # Main application layout
+│   │   ├── AnglePlot.jsx    # ECharts visualization component
+│   │   └── ModelSummaryTable.jsx # Model results display
 │   ├── context/
-│   │   └── AppContext.jsx   # État global et logique SARIMAX
-│   └── index.jsx            # Point d'entrée
-├── package.json             # Dépendances frontend uniquement
-├── vite.config.js          # Configuration Vite (sans proxy)
-└── tailwind.config.js      # Configuration Tailwind
+│   │   └── AppContext.jsx   # Global state and SARIMAX logic
+│   ├── services/
+│   │   ├── bvhParser.js     # BVH file parsing
+│   │   ├── sarimaxModel.js  # SARIMAX implementation
+│   │   ├── classes/         # Core algorithm classes
+│   │   ├── forecasting/     # Forecasting methods
+│   │   └── utils/           # Metrics and utilities
+│   └── index.jsx            # Application entry point
+├── package.json             # Frontend dependencies only
+├── vite.config.js          # Vite configuration
+└── tailwind.config.js      # Tailwind CSS configuration
 ```
 
-## 🔧 Modules SARIMAX Importés
+## 🔧 Core SARIMAX Modules
 
-L'application importe directement les modules depuis le répertoire parent :
+The application includes a complete SARIMAX implementation:
 
 ```javascript
-import { SARIMAX } from '../../../classes/SARIMAX.js';
-import { StandardScaler } from '../../../classes/StandardScaler.js';
-import { extractDataFromBVH } from '../../../utils/bvhUtils.js';
-import { performStaticForecasting } from '../../../forecasting/staticForecasting.js';
-import { performDynamicForecasting } from '../../../forecasting/dynamicForecasting.js';
-import { calculateMetrics } from '../../../utils/metrics.js';
+import { SARIMAX } from './classes/SARIMAX.js';
+import { StandardScaler } from './classes/StandardScaler.js';
+import { prepareForSARIMAX } from './bvhParser.js';
+import { staticForecasting } from './forecasting/staticForecasting.js';
+import { MSE, MAE, UTheil, calculateCorrelation } from './utils/metrics.js';
 ```
 
-## 🚀 Démarrage
+## 🚀 Getting Started
 
-### Option 1 - Script automatique
-```bash
-./start-dev.bat
-```
-
-### Option 2 - Manuel
+### Installation
 ```bash
 npm install
+```
+
+### Development
+```bash
 npm run dev
 ```
 
-L'application sera disponible sur http://localhost:3000
+### Production Build
+```bash
+npm run build
+```
 
-## 💡 Avantages de l'Architecture Client-Side
+The application will be available at http://localhost:5173
 
-- ✅ **Pas de serveur requis** - Déploiement statique possible
-- ✅ **Traitement local** - Données BVH restent sur la machine de l'utilisateur
-- ✅ **Performance** - Pas de latence réseau pour les calculs
-- ✅ **Simplicité** - Une seule application à maintenir
-- ✅ **Sécurité** - Pas de transfert de données sensibles
+## 💡 Advantages of Client-Side Architecture
+
+- ✅ **No server required** - Static deployment possible
+- ✅ **Local processing** - BVH data stays on user's machine
+- ✅ **High performance** - No network latency for calculations
+- ✅ **Simple deployment** - Single application to maintain
+- ✅ **Data security** - No sensitive data transfer required
 
 ## 🔄 Workflow
 
-1. **Upload** : Glisser-déposer les fichiers BVH train/test
-2. **Configuration** : Sélectionner le joint cible et paramètres SARIMAX
-3. **Analyse** : Cliquer "Start Analysis" - tout se fait dans le navigateur
-4. **Résultats** : Visualiser graphiques interactifs et métriques
-5. **Export** : Télécharger les résultats (fonctionnalité à implémenter)
+1. **Upload**: Drag & drop BVH training and test files
+2. **Configure**: Select target joint, axis, and SARIMAX parameters
+3. **Analyze**: Click "Start SARIMAX Analysis" - everything runs in browser
+4. **Results**: View interactive plots and detailed metrics
+5. **Compare**: Switch between static and dynamic forecasting methods
 
 ## 🎯 Technologies
 
-- **Frontend** : SolidJS, Vite, Tailwind CSS
-- **Visualisation** : Plotly.js
-- **Algorithme** : SARIMAX JavaScript pur
-- **Parsing** : BVH parser JavaScript intégré
+- **Frontend**: React 18, Vite, Tailwind CSS
+- **Visualization**: ECharts (echarts-for-react)
+- **Mathematics**: MathJS for linear algebra operations
+- **Algorithm**: Pure JavaScript SARIMAX implementation
+- **Parsing**: Built-in BVH parser for motion capture data
 
-## 📊 Métriques Calculées
+## 📊 Calculated Metrics
 
-- **MSE** : Mean Squared Error
-- **MAE** : Mean Absolute Error  
-- **U-Theil** : Theil's U statistic
-- **Corrélation** : Coefficient de corrélation
+- **MSE**: Mean Squared Error
+- **MAE**: Mean Absolute Error  
+- **U-Theil**: Theil's U statistic
+- **Correlation**: Correlation coefficient
+- **Model Summary**: Coefficients, p-values, significance levels
 
-## 🔮 Prochaines Étapes
+## 🎮 Forecasting Methods
 
-- [ ] Export des résultats (CSV/JSON)
-- [ ] Comparaisons multi-modèles
-- [ ] Paramètres SARIMAX avancés
-- [ ] Sauvegarde/chargement de configurations
-- [ ] Mode offline complet (PWA) 
+### Static Forecasting (steps = 1)
+- Uses real data for all predictions
+- Most stable and reliable
+- Best for validation and comparison
+
+### Dynamic Forecasting (steps > 1)
+- Uses predicted data for multi-step ahead forecasting
+- More challenging but realistic for future predictions
+- Periodic real data reset prevents error accumulation
+
+## 🔮 Project Status
+
+This is a clean, production-ready implementation with:
+- ✅ Removed all debugging console statements
+- ✅ Eliminated unused components and dependencies
+- ✅ Consistent React architecture throughout
+- ✅ Optimized bundle size and performance
+- ✅ Clear separation of concerns 
