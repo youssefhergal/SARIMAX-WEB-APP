@@ -41,7 +41,12 @@ export function calculateCorrelation(x, y) {
 export function createModelSummary(model, angles, targetAngle, indExo) {
   const summary = model.summary();
   // Variables for the model: exogenous variables + lagged endogenous variables
-  const variables = [...indExo.map(i => angles[i]), `${targetAngle}_T-1`, `${targetAngle}_T-2`];
+  const exogVariables = indExo.map(i => angles[i]);
+  const laggedVariables = [];
+  for (let lag = 1; lag <= model.order; lag++) {
+    laggedVariables.push(`${targetAngle}_T-${lag}`);
+  }
+  const variables = [...exogVariables, ...laggedVariables];
   
   console.log('\n=== MODEL SUMMARY ===');
   console.log('Variables:', variables);

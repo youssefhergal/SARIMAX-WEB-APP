@@ -1,11 +1,10 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import ModelSummaryTable from './ModelSummaryTable';
 import AnglePlot from './AnglePlot';
 
 function Dashboard() {
   const { 
-    ui, 
     analysisState, 
     config, 
     analysisData, 
@@ -20,9 +19,6 @@ function Dashboard() {
   
   const trainFileRef = useRef(null);
   const testFileRef = useRef(null);
-  
-  // État local pour les onglets
-  const [activeTab, setActiveTab] = useState('static');
 
   const handleTrainFileChange = async (e) => {
     const file = e.target.files[0];
@@ -60,8 +56,8 @@ function Dashboard() {
 
   const canAnalyze = files.trainParsed && files.testParsed && !analysisState.isAnalyzing;
   
-  // Render content based on active tab
-  const renderTabContent = () => {
+  // Render main content
+  const renderContent = () => {
     if (!analysisState.results) {
       return (
         <div className="space-y-6">
@@ -74,224 +70,72 @@ function Dashboard() {
                 configure the model parameters, and start the analysis.
               </p>
               <div className="mt-4 text-sm text-gray-500">
-                Your real SARIMAX implementation with mathjs is ready to process motion capture data.
+                Choose between static forecasting (steps=1) or dynamic forecasting (steps≥2).
               </div>
             </div>
           </div>
-
         </div>
       );
     }
 
-    switch (activeTab) {
-      case 'static':
-        return (
-          <>
-            {/* Static Forecasting Visualization */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">📊 Static Forecasting</h3>
-              <AnglePlot 
-                targetJoint={config.targetJoint}
-                targetAxis={config.targetAxis}
-                analysisType="static"
-                realData={analysisState.results}
-              />
-            </div>
-
-            {/* Model Summary Table */}
-            <div className="mb-6">
-              <ModelSummaryTable analysisResults={analysisState.results} />
-            </div>
-
-            {/* Static Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">MSE</div>
-                <div className="text-lg font-semibold text-green-600">
-                  {analysisState.results.metrics.static.mse.toFixed(6)}
-                </div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">MAE</div>
-                <div className="text-lg font-semibold text-blue-600">
-                  {analysisState.results.metrics.static.mae.toFixed(6)}
-                </div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">U-Theil</div>
-                <div className="text-lg font-semibold text-purple-600">
-                  {analysisState.results.metrics.static.uTheil.toFixed(6)}
-                </div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">Correlation</div>
-                <div className="text-lg font-semibold text-green-600">
-                  {analysisState.results.metrics.static.correlation.toFixed(4)}
-                </div>
-              </div>
-            </div>
-          </>
-        );
-        
-      case 'dynamic':
-        if (!analysisState.results.metrics.dynamic) {
-          return (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-              <div className="text-center">
-                <div className="text-4xl mb-4">🌊</div>
-                <h3 className="text-lg font-semibold text-yellow-800 mb-2">Dynamic Forecasting Not Available</h3>
-                <p className="text-yellow-700">
-                  Dynamic forecasting is currently disabled in the configuration. 
-                  Enable it in the model parameters to see dynamic predictions.
-                </p>
-                <button 
-                  onClick={() => updateModelParams({ enableDynamic: true })}
-                  className="mt-4 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors"
-                >
-                  Enable Dynamic Forecasting
-                </button>
-              </div>
-            </div>
-          );
-        }
-        
-        return (
-          <>
-            {/* Dynamic Forecasting Visualization */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-              <h3 className="text-lg font-semibold mb-4">🌊 Dynamic Forecasting</h3>
-              <AnglePlot 
-                targetJoint={config.targetJoint}
-                targetAxis={config.targetAxis}
-                analysisType="dynamic"
-                realData={analysisState.results}
-              />
-            </div>
-
-            {/* Model Summary Table */}
-            <div className="mb-6">
-              <ModelSummaryTable analysisResults={analysisState.results} />
-            </div>
-
-            {/* Dynamic Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">MSE</div>
-                <div className="text-lg font-semibold text-green-600">
-                  {analysisState.results.metrics.dynamic.mse.toFixed(6)}
-                </div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">MAE</div>
-                <div className="text-lg font-semibold text-blue-600">
-                  {analysisState.results.metrics.dynamic.mae.toFixed(6)}
-                </div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">U-Theil</div>
-                <div className="text-lg font-semibold text-purple-600">
-                  {analysisState.results.metrics.dynamic.uTheil.toFixed(6)}
-                </div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">Correlation</div>
-                <div className="text-lg font-semibold text-green-600">
-                  {analysisState.results.metrics.dynamic.correlation.toFixed(4)}
-                </div>
-              </div>
-            </div>
-          </>
-        );
-        
-      case 'comparison':
-        return (
-          <div className="space-y-6">
-            {/* Comparison Overview */}
-            <div className="bg-white rounded-lg border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold mb-4">🔍 Model Comparison</h3>
-              
-              {/* Metrics Comparison Table */}
-              <div className="overflow-x-auto">
-                <table className="min-w-full table-auto border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Metric</th>
-                      <th className="border border-gray-300 px-4 py-2 text-center font-semibold">📊 Static</th>
-                      {analysisState.results.metrics.dynamic && (
-                        <th className="border border-gray-300 px-4 py-2 text-center font-semibold">🌊 Dynamic</th>
-                      )}
-                      <th className="border border-gray-300 px-4 py-2 text-center font-semibold">🏆 Best</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {['mse', 'mae', 'uTheil', 'correlation'].map((metric, index) => {
-                      const staticValue = analysisState.results.metrics.static[metric];
-                      const dynamicValue = analysisState.results.metrics.dynamic?.[metric];
-                      
-                      // Determine best (lower is better for mse, mae, uTheil; higher is better for correlation)
-                      const isStaticBetter = dynamicValue ? 
-                        (metric === 'correlation' ? staticValue > dynamicValue : staticValue < dynamicValue) : 
-                        true;
-                      
-                      return (
-                        <tr key={metric} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                          <td className="border border-gray-300 px-4 py-2 font-semibold">
-                            {metric.toUpperCase()}
-                          </td>
-                          <td className={`border border-gray-300 px-4 py-2 text-center font-mono ${
-                            isStaticBetter ? 'bg-green-100 font-bold' : ''
-                          }`}>
-                            {staticValue.toFixed(6)}
-                          </td>
-                          {dynamicValue && (
-                            <td className={`border border-gray-300 px-4 py-2 text-center font-mono ${
-                              !isStaticBetter ? 'bg-green-100 font-bold' : ''
-                            }`}>
-                              {dynamicValue.toFixed(6)}
-                            </td>
-                          )}
-                          <td className="border border-gray-300 px-4 py-2 text-center">
-                            {isStaticBetter ? '📊 Static' : '🌊 Dynamic'}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Side by side visualization if both methods are available */}
-            {analysisState.results.metrics.dynamic && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <h4 className="font-semibold mb-3">📊 Static Forecasting</h4>
-                  <AnglePlot 
-                    targetJoint={config.targetJoint}
-                    targetAxis={config.targetAxis}
-                    analysisType="static"
-                    realData={analysisState.results}
-                    compact={true}
-                  />
-                </div>
-                <div className="bg-white rounded-lg border border-gray-200 p-4">
-                  <h4 className="font-semibold mb-3">🌊 Dynamic Forecasting</h4>
-                  <AnglePlot 
-                    targetJoint={config.targetJoint}
-                    targetAxis={config.targetAxis}
-                    analysisType="dynamic"
-                    realData={analysisState.results}
-                    compact={true}
-                  />
-                </div>
-              </div>
-            )}
+    return (
+      <>
+        {/* Forecasting Visualization */}
+        <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
+          <h3 className="text-lg font-semibold mb-4">
+            {analysisState.results.method === 'static' ? '📊 Static' : '🔄 Dynamic'} Forecasting Results 
+            <span className="text-sm font-normal text-gray-600 ml-2">
+              (steps={analysisState.results.steps})
+            </span>
+          </h3>
+          <div className="text-sm text-gray-600 mb-4">
+            Method: {analysisState.results.method === 'static' 
+              ? 'Real data used for all predictions' 
+              : 'Predicted data used for multi-step ahead forecasting'
+            }
           </div>
-        );
-        
-      default:
-        return null;
-    }
+          <AnglePlot 
+            targetJoint={config.targetJoint}
+            targetAxis={config.targetAxis}
+            analysisType={analysisState.results.method}
+            realData={analysisState.results}
+          />
+        </div>
+
+        {/* Model Summary Table */}
+        <div className="mb-6">
+          <ModelSummaryTable analysisResults={analysisState.results} />
+        </div>
+
+        {/* Static Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-600">MSE</div>
+            <div className="text-lg font-semibold text-green-600">
+              {analysisState.results.metrics.mse.toFixed(6)}
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-600">MAE</div>
+            <div className="text-lg font-semibold text-blue-600">
+              {analysisState.results.metrics.mae.toFixed(6)}
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-600">U-Theil</div>
+            <div className="text-lg font-semibold text-purple-600">
+              {analysisState.results.metrics.uTheil.toFixed(6)}
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="text-sm text-gray-600">Correlation</div>
+            <div className="text-lg font-semibold text-green-600">
+              {analysisState.results.metrics.correlation.toFixed(4)}
+            </div>
+          </div>
+        </div>
+      </>
+    );
   };
   
   return (
@@ -303,7 +147,7 @@ function Dashboard() {
             🧠 SARIMAX Motion Analysis
           </h1>
           <div className="text-sm text-gray-500">
-            Your Real SARIMAX Implementation
+            Flexible Static/Dynamic Forecasting
           </div>
         </div>
       </header>
@@ -418,7 +262,7 @@ function Dashboard() {
             {/* Model Parameters - Simplified */}
             <div className="mb-6">
               <h3 className="text-sm font-medium text-gray-700 mb-2">⚙️ SARIMAX Parameters</h3>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 <div>
                   <label className="text-xs text-gray-600 mb-1 block">
                     Lags (Order) - Current: {config.modelParams.lags}
@@ -436,45 +280,34 @@ function Dashboard() {
                     <span>5</span>
                     <span>10</span>
                   </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Number of lagged terms for the endogenous variable
+                  </div>
                 </div>
-
+                
                 <div>
                   <label className="text-xs text-gray-600 mb-1 block">
-                    Steps - Current: {config.modelParams.steps} {config.modelParams.steps === 0 ? '(Static)' : '(Hybrid)'}
+                    Steps - Current: {config.modelParams.steps || 1} ({(config.modelParams.steps || 1) <= 1 ? 'Static' : 'Dynamic'})
                   </label>
                   <input 
                     type="range" 
-                    min="0" 
-                    max="10"
-                    value={config.modelParams.steps}
+                    min="1" 
+                    max="5"
+                    value={config.modelParams.steps || 1}
                     onChange={(e) => updateModelParams({ steps: parseInt(e.target.value) })}
                     className="w-full" 
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
-                    <span>0</span>
+                    <span>1</span>
+                    <span>3</span>
                     <span>5</span>
-                    <span>10</span>
                   </div>
                   <div className="text-xs text-gray-500 mt-1">
-                    {config.modelParams.steps === 0 ? 
-                      'Static method (all real training data)' :
-                      `Hybrid: Reset with real data every ${config.modelParams.steps} step${config.modelParams.steps > 1 ? 's' : ''} to prevent noise accumulation`
+                    {(config.modelParams.steps || 1) <= 1 
+                      ? '📊 Static: Uses real data for all predictions' 
+                      : '🔄 Dynamic: Uses predicted data for multi-step ahead'
                     }
                   </div>
-                </div>
-                
-                {/* Enable Dynamic Forecasting Option */}
-                <div className="flex items-center space-x-2">
-                  <input 
-                    type="checkbox"
-                    id="enableDynamic"
-                    checked={config.modelParams.enableDynamic}
-                    onChange={(e) => updateModelParams({ enableDynamic: e.target.checked })}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <label htmlFor="enableDynamic" className="text-xs text-gray-600">
-                    Enable Dynamic Forecasting
-                  </label>
                 </div>
               </div>
             </div>
@@ -526,7 +359,7 @@ function Dashboard() {
                     Train: {analysisData.trainData.frameCount} frames, Test: {analysisData.testData.frameCount} frames
                   </div>
                   <div className="text-xs text-green-600 mt-1">
-                    Target: {config.targetJoint}_{config.targetAxis}, Lags: {config.modelParams.lags}, Steps: {config.modelParams.steps}
+                    Target: {config.targetJoint}_{config.targetAxis}, Lags: {config.modelParams.lags}, Steps: {config.modelParams.steps} ({config.modelParams.steps <= 1 ? 'Static' : 'Dynamic'})
                   </div>
                 </div>
               ) : (
@@ -541,46 +374,7 @@ function Dashboard() {
 
         {/* Main Content */}
         <main className="flex-1 p-6">
-          {/* Tabs Navigation */}
-          <div className="mb-6">
-            <div className="border-b border-gray-200">
-              <nav className="-mb-px flex space-x-8">
-                <button 
-                  onClick={() => setActiveTab('static')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'static' 
-                      ? 'border-blue-500 text-blue-600' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  📊 Static Forecasting
-                </button>
-                <button 
-                  onClick={() => setActiveTab('dynamic')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'dynamic' 
-                      ? 'border-blue-500 text-blue-600' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  🌊 Dynamic Forecasting
-                </button>
-                <button 
-                  onClick={() => setActiveTab('comparison')}
-                  className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'comparison' 
-                      ? 'border-blue-500 text-blue-600' 
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  🔍 Comparison
-                </button>
-              </nav>
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          {renderTabContent()}
+          {renderContent()}
         </main>
       </div>
     </div>

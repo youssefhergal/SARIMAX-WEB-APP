@@ -6,9 +6,6 @@ import { SARIMAX } from './classes/SARIMAX.js';
 import { StandardScaler } from './classes/StandardScaler.js';
 import { MSE, MAE, UTheil, calculateCorrelation, createModelSummary } from './utils/metrics.js';
 import { staticForecasting } from './forecasting/staticForecasting.js';
-import { dynamicForecasting } from './forecasting/dynamicForecasting.js';
-import { hybridForecasting } from './forecasting/hybridForecasting.js';
-import { optimizedHybridForecasting } from './forecasting/optimizedHybridForecasting.js';
 
 // Main SARIMAX Analyzer class
 export class SARIMAXAnalyzer {
@@ -127,15 +124,19 @@ export class SARIMAXAnalyzer {
       
       console.log(`📊 Multi-channel data: Train ${trainMultiChannel.length}x${trainMultiChannel[0].length}, Test ${testMultiChannel.length}x${testMultiChannel[0].length}`);
       
-      // Normalize using your StandardScaler
-      console.log('🔄 Creating and fitting StandardScaler...');
-      this.scaler = new StandardScaler();
+      // Normalize using SEPARATE StandardScalers like the working version
+      console.log('🔄 Creating SEPARATE StandardScalers for train and test (like working version)...');
+      const scalerTrain = new StandardScaler();
+      const scalerTest = new StandardScaler();
       
-      console.log('🔄 Fitting scaler on training data...');
-      const normalizedTrainData = this.scaler.fitTransform(trainMultiChannel);
+      console.log('🔄 Fitting and transforming training data with its own scaler...');
+      const normalizedTrainData = scalerTrain.fitTransform(trainMultiChannel);
       
-      console.log('🔄 Transforming test data...');
-      const normalizedTestData = this.scaler.transform(testMultiChannel);
+      console.log('🔄 Fitting and transforming test data with its own scaler...');
+      const normalizedTestData = scalerTest.fitTransform(testMultiChannel);
+      
+      // Store the test scaler for denormalization (not the train scaler!)
+      this.scaler = scalerTest;
       
       // Validate normalized data
       if (!Array.isArray(normalizedTrainData) || normalizedTrainData.length === 0) {
@@ -202,131 +203,98 @@ export class SARIMAXAnalyzer {
       
       console.log('✅ Model summary created');
       
-      // Step 7: Generate predictions using your forecasting functions
+            // Step 7: Generate predictions using static forecasting
       if (progressCallback) progressCallback(80, 'Generating forecasts...');
       
-      let mainResults;
-      if (config.steps === 0) {
-        console.log('🔄 Running static forecasting (steps=0)...');
-        const staticResults = staticForecasting(
-          this.model, 
-          normalizedTestData, 
-          targetIndex, 
-          exogIndices, 
-          this.scaler, 
-          targetIndex
-        );
-        
-        if (!staticResults || !staticResults.predStatic || !staticResults.origValues) {
-          throw new Error('Invalid static forecasting results');
-        }
-        
-        if (!Array.isArray(staticResults.predStatic) || staticResults.predStatic.length === 0) {
-          throw new Error(`Invalid static predictions: ${typeof staticResults.predStatic}, length: ${staticResults.predStatic?.length}`);
-        }
-        
-        mainResults = {
-          predicted: staticResults.predStatic,
-          origValues: staticResults.origValues
-        };
-        
-        console.log(`✅ Static forecasting completed: ${staticResults.predStatic.length} predictions`);
-      } else {
-        console.log(`🔄 Running optimized hybrid forecasting (steps=${config.steps})...`);
-        const hybridResults = optimizedHybridForecasting(
-          this.model, 
-          normalizedTestData, 
-          targetIndex, 
-          exogIndices, 
-          this.scaler, 
-          targetIndex,
-          config.steps
-        );
-        
-        if (!hybridResults || !hybridResults.predHybrid || !hybridResults.origValues) {
-          throw new Error('Invalid hybrid forecasting results');
-        }
-        
-        if (!Array.isArray(hybridResults.predHybrid) || hybridResults.predHybrid.length === 0) {
-          throw new Error(`Invalid hybrid predictions: ${typeof hybridResults.predHybrid}, length: ${hybridResults.predHybrid?.length}`);
-        }
-        
-        mainResults = {
-          predicted: hybridResults.predHybrid,
-          origValues: hybridResults.origValues
-        };
-        
-        console.log(`✅ Hybrid forecasting completed: ${hybridResults.predHybrid.length} predictions`);
+      console.log('🔄 Running static forecasting...');
+      const staticResults = staticForecasting(
+        this.model, 
+        normalizedTestData, 
+        targetIndex, 
+        exogIndices, 
+        this.scaler, 
+        targetIndex,
+        config.steps || 1  // Add steps parameter (default = 1 for static)
+      );
+      
+      if (!staticResults || !staticResults.predStatic || !staticResults.origValues) {
+        throw new Error('Invalid static forecasting results');
       }
       
-      let dynamicResults = null;
-      if (config.enableDynamic) {
-        console.log('🔄 Running dynamic forecasting...');
-        dynamicResults = dynamicForecasting(
-          this.model, 
-          normalizedTestData, 
-          targetIndex, 
-          exogIndices, 
-          this.scaler, 
-          targetIndex
-        );
-        console.log(`✅ Dynamic forecasting completed: ${dynamicResults.predDynamic.length} predictions`);
+      if (!Array.isArray(staticResults.predStatic) || staticResults.predStatic.length === 0) {
+        throw new Error(`Invalid static predictions: ${typeof staticResults.predStatic}, length: ${staticResults.predStatic?.length}`);
       }
+      
+      const mainResults = {
+        predicted: staticResults.predStatic,
+        origValues: staticResults.origValues,
+        frameIndices: staticResults.frameIndices,
+        method: staticResults.method,
+        steps: staticResults.steps
+      };
+      
+      console.log(`✅ ${staticResults.method.toUpperCase()} forecasting completed: ${staticResults.predStatic.length} predictions (steps=${staticResults.steps})`);
       
       // Step 8: Calculate metrics using your functions
       if (progressCallback) progressCallback(95, 'Calculating metrics...');
       
-      console.log(`🔄 Calculating main metrics (${config.steps === 0 ? 'static' : 'hybrid'})...`);
-      const mainMetrics = {
+      console.log('🔄 Calculating forecasting metrics...');
+      const staticMetrics = {
         mse: MSE(mainResults.origValues, mainResults.predicted),
         mae: MAE(mainResults.origValues, mainResults.predicted),
         uTheil: UTheil(mainResults.origValues, mainResults.predicted),
         correlation: calculateCorrelation(mainResults.origValues, mainResults.predicted)
       };
       
-      console.log(`📊 Main metrics: MSE=${mainMetrics.mse.toFixed(6)}, MAE=${mainMetrics.mae.toFixed(6)}`);
-      
-      const dynamicMetrics = dynamicResults ? {
-        mse: MSE(dynamicResults.origValues, dynamicResults.predDynamic),
-        mae: MAE(dynamicResults.origValues, dynamicResults.predDynamic),
-        uTheil: UTheil(dynamicResults.origValues, dynamicResults.predDynamic),
-        correlation: calculateCorrelation(dynamicResults.origValues, dynamicResults.predDynamic)
-      } : null;
+      console.log(`📊 ${staticResults.method.toUpperCase()} metrics: MSE=${staticMetrics.mse.toFixed(6)}, MAE=${staticMetrics.mae.toFixed(6)}`);
       
       // Step 9: Compile results with confidence intervals
       if (progressCallback) progressCallback(100, 'Analysis complete!');
       
       // Calculate confidence intervals based on MSE
       const confidenceMultiplier = 1.96; // 95% confidence
-      const confidenceInterval = Math.sqrt(mainMetrics.mse) * confidenceMultiplier;
+      const confidenceInterval = Math.sqrt(staticMetrics.mse) * confidenceMultiplier;
       
       console.log('🔄 Compiling final results...');
       
-      // Fix time alignment: frames should start from model.order, not 1
-      // Since predictions start from frame model.order (e.g., if lags=2, start from frame 2)
-      const startFrame = this.model.order;
+      // Use the actual frame indices from forecasting
+      const framesArray = mainResults.frameIndices;
       
-      console.log(`🎯 Frame alignment: predictions start from frame ${startFrame} (model order=${this.model.order})`);
+      console.log(`🎯 ${staticResults.method.toUpperCase()} FORECASTING RESULTS:`);
+      console.log(`   Method: ${staticResults.method} (steps=${staticResults.steps})`);
+      console.log(`   X-axis will show: [${framesArray[0]}, ${framesArray[1]}, ${framesArray[2]}, ..., ${framesArray[framesArray.length-1]}]`);
+      console.log(`   Starting from frame ${framesArray[0]} (model.order=${this.model.order})`);
+      console.log(`   Both predictions and originals: ${mainResults.predicted.length} = ${mainResults.origValues.length} values`);
+      
+      console.log(`   First 3 predicted: [${mainResults.predicted.slice(0, 3).map(x => x.toFixed(2)).join(', ')}]`);
+      console.log(`   First 3 original: [${mainResults.origValues.slice(0, 3).map(x => x.toFixed(2)).join(', ')}]`)
       
       this.results = {
         targetJoint: config.targetJoint,
         targetAxis: config.targetAxis,
-        steps: config.steps,
-        frames: Array.from({ length: mainResults.origValues.length }, (_, i) => startFrame + i),
+        frames: framesArray,
         original: mainResults.origValues,
         predicted: mainResults.predicted,
         confidence_upper: mainResults.predicted.map(val => val + confidenceInterval),
         confidence_lower: mainResults.predicted.map(val => val - confidenceInterval),
-        metrics: {
-          static: mainMetrics, // Keep the name 'static' for UI compatibility
-          dynamic: dynamicMetrics
-        },
-        modelSummary: this.formatModelSummary(modelSummaryData, bvhAngles, exogIndices)
+        metrics: staticMetrics,
+        modelSummary: this.formatModelSummary(modelSummaryData, bvhAngles, exogIndices),
+        method: mainResults.method,
+        steps: mainResults.steps
       };
 
+      console.log('🔍 FINAL RESULTS STRUCTURE DEBUG:');
+      console.log(`   Target: ${this.results.targetJoint}_${this.results.targetAxis}`);
+      console.log(`   Frames: [${this.results.frames.slice(0, 3).join(', ')}...${this.results.frames.slice(-3).join(', ')}] (${this.results.frames.length} total)`);
+      console.log(`   Original: [${this.results.original.slice(0, 3).map(x => x.toFixed(2)).join(', ')}...${this.results.original.slice(-3).map(x => x.toFixed(2)).join(', ')}] (${this.results.original.length} total)`);
+      console.log(`   Predicted: [${this.results.predicted.slice(0, 3).map(x => x.toFixed(2)).join(', ')}...${this.results.predicted.slice(-3).map(x => x.toFixed(2)).join(', ')}] (${this.results.predicted.length} total)`);
+      console.log(`   Original range: [${Math.min(...this.results.original).toFixed(2)}, ${Math.max(...this.results.original).toFixed(2)}]`);
+      console.log(`   Predicted range: [${Math.min(...this.results.predicted).toFixed(2)}, ${Math.max(...this.results.predicted).toFixed(2)}]`);
+      console.log(`   Confidence interval: ±${confidenceInterval.toFixed(3)}`);
+
       console.log('🎉 Analysis completed successfully!');
-      console.log(`📊 Forecasting method: ${config.steps === 0 ? 'Static (all real data)' : `Hybrid (steps=${config.steps})`}`);
-      console.log(`📊 Final metrics: MSE=${mainMetrics.mse.toFixed(6)}, MAE=${mainMetrics.mae.toFixed(6)}, U-Theil=${mainMetrics.uTheil.toFixed(6)}, Correlation=${mainMetrics.correlation.toFixed(4)}`);
+      console.log('📊 Forecasting method: Static (using real exogenous data)');
+      console.log(`📊 Final metrics: MSE=${staticMetrics.mse.toFixed(6)}, MAE=${staticMetrics.mae.toFixed(6)}, U-Theil=${staticMetrics.uTheil.toFixed(6)}, Correlation=${staticMetrics.correlation.toFixed(4)}`);
 
       return { success: true, data: this.results };
 
@@ -346,35 +314,30 @@ export class SARIMAXAnalyzer {
       // Format model summary for the table component
       const variables = [];
       
-      // Add constant term
-      variables.push({
-        variable: 'const',
-        coefficient: modelSummaryData.coefficients[0] || 0,
-        pValue: modelSummaryData.pValues[0] || 0.999,
-        significance: this.getSignificanceCode(modelSummaryData.pValues[0] || 0.999)
-      });
-      
-      // Add exogenous variables
-      for (let i = 0; i < exogIndices.length && i + 1 < modelSummaryData.coefficients.length; i++) {
+      // Add exogenous variables (start from index 0, no constant term)
+      for (let i = 0; i < exogIndices.length && i < modelSummaryData.coefficients.length; i++) {
         const exogIndex = exogIndices[i];
         const variableName = bvhAngles[exogIndex] || `exog_${i}`;
         variables.push({
           variable: variableName,
-          coefficient: modelSummaryData.coefficients[i + 1],
-          pValue: modelSummaryData.pValues[i + 1],
-          significance: this.getSignificanceCode(modelSummaryData.pValues[i + 1])
+          coefficient: modelSummaryData.coefficients[i],
+          pValue: modelSummaryData.pValues[i],
+          significance: this.getSignificanceCode(modelSummaryData.pValues[i])
         });
       }
       
       // Add lagged endogenous variables
       const numExog = exogIndices.length;
-      for (let lag = 1; lag <= this.model.order && numExog + lag < modelSummaryData.coefficients.length; lag++) {
-        variables.push({
-          variable: `${bvhAngles[0]}_T-${lag}`,
-          coefficient: modelSummaryData.coefficients[numExog + lag],
-          pValue: modelSummaryData.pValues[numExog + lag],
-          significance: this.getSignificanceCode(modelSummaryData.pValues[numExog + lag])
-        });
+      for (let lag = 1; lag <= this.model.order; lag++) {
+        const coeffIndex = numExog + lag - 1; // -1 because we start from lag 1, but array index starts from 0
+        if (coeffIndex < modelSummaryData.coefficients.length) {
+          variables.push({
+            variable: `${bvhAngles[0]}_T-${lag}`,
+            coefficient: modelSummaryData.coefficients[coeffIndex],
+            pValue: modelSummaryData.pValues[coeffIndex],
+            significance: this.getSignificanceCode(modelSummaryData.pValues[coeffIndex])
+          });
+        }
       }
 
       const summary = {

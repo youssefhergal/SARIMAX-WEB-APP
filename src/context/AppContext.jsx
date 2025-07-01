@@ -33,9 +33,7 @@ export function AppProvider({ children }) {
     targetAxis: 'Yrotation',
     modelParams: {
       lags: 2,  // Start with order 2 like in your main.js
-      steps: 0,  // 0 = static method, 1+ = hybrid forecasting
-      enableStatic: true,
-      enableDynamic: false  // Disable dynamic for now to simplify
+      steps: 1  // Default to static forecasting (steps=1)
     }
   });
 
@@ -210,9 +208,7 @@ export function AppProvider({ children }) {
           targetJoint: config.targetJoint,
           targetAxis: config.targetAxis,
           lags: config.modelParams.lags,
-          steps: config.modelParams.steps,
-          enableStatic: config.modelParams.enableStatic,
-          enableDynamic: config.modelParams.enableDynamic
+          steps: config.modelParams.steps
         };
 
         const result = await analyzer.analyze(analysisConfig, progressCallback);
