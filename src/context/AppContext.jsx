@@ -33,7 +33,8 @@ export function AppProvider({ children }) {
     targetAxis: 'Yrotation',
     modelParams: {
       lags: 2,  // Start with order 2 like in your main.js
-      steps: 1  // Default to static forecasting (steps=1)
+      steps: 1,  // Default to static forecasting (steps=1)
+      resolver: 'ols'  // Default resolver method
     }
   });
 

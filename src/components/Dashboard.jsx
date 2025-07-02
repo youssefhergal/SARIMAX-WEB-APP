@@ -302,6 +302,24 @@ function Dashboard() {
                     }
                   </div>
                 </div>
+
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">
+                    Estimation Method - Current: {config.modelParams.resolver?.toUpperCase() || 'OLS'}
+                  </label>
+                  <select 
+                    value={config.modelParams.resolver || 'ols'}
+                    onChange={(e) => updateModelParams({ resolver: e.target.value })}
+                    className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                  >
+                    <option value="ols">OLS (Ordinary Least Squares)</option>
+                    <option value="mle">MLE (Maximum Likelihood Estimation)</option>
+                    <option value="ridge">Ridge L2 (Regularized Regression)</option>
+                  </select>
+                  <div className="text-xs text-gray-500 mt-1">
+                    📊 Currently using OLS - Other methods coming soon
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -352,7 +370,7 @@ function Dashboard() {
                     Train: {analysisData.trainData.frameCount} frames, Test: {analysisData.testData.frameCount} frames
                   </div>
                   <div className="text-xs text-green-600 mt-1">
-                    Target: {config.targetJoint}_{config.targetAxis}, Lags: {config.modelParams.lags}, Steps: {config.modelParams.steps} ({config.modelParams.steps <= 1 ? 'Static' : 'Dynamic'})
+                    Target: {config.targetJoint}_{config.targetAxis}, Lags: {config.modelParams.lags}, Steps: {config.modelParams.steps} ({config.modelParams.steps <= 1 ? 'Static' : 'Dynamic'}), Method: {config.modelParams.resolver?.toUpperCase() || 'OLS'}
                   </div>
                 </div>
               ) : (
