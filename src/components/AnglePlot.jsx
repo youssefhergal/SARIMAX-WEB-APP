@@ -1,17 +1,57 @@
 import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 
+/**
+ * Enhanced AnglePlot Component with Confidence Intervals
+ * 
+ * Features:
+ * - Displays original vs predicted angle data
+ * - Shows confidence intervals as shaded areas
+ * - Enhanced hover tooltips with:
+ *   * Original angle value
+ *   * Predicted angle value  
+ *   * Prediction error
+ *   * Dynamic confidence interval bounds
+ *   * Interval width
+ * - Dynamic confidence level display (80%, 90%, 95%, 99%)
+ * - Interactive zoom and pan controls
+ */
 const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData = null }) => {
   // Générer des données synthétiques ou utiliser les vraies données
   const chartData = useMemo(() => {
     // Si nous avons des vraies données, les utiliser
     if (realData && realData.frames && realData.original && realData.predicted) {
+      // Determine lag/order value
+      const lag = realData.lags || realData.order || 0;
+      // Slice arrays to align with predictions
+      const alignedFrames = realData.frames.slice(lag);
+      const alignedOriginal = realData.original.slice(lag);
+      const alignedPredicted = realData.predicted;
+      const alignedUpper = realData.confidence_upper ? realData.confidence_upper : alignedPredicted.map(val => val + 5);
+      const alignedLower = realData.confidence_lower ? realData.confidence_lower : alignedPredicted.map(val => val - 5);
+
+      // Debug logging
+      console.log('🔍 AnglePlot Debug - Real Data Structure:');
+      console.log('Lag:', lag);
+      console.log('Frames:', alignedFrames.slice(0, 10), '...');
+      console.log('Original:', alignedOriginal.slice(0, 10), '...');
+      console.log('Predicted:', alignedPredicted.slice(0, 10), '...');
+      console.log('Data length:', alignedFrames.length);
+      console.log('Frame range:', alignedFrames[0], 'to', alignedFrames[alignedFrames.length - 1]);
+      if (alignedFrames.length !== alignedOriginal.length || alignedFrames.length !== alignedPredicted.length) {
+        console.warn('⚠️ Data length mismatch:', {
+          frames: alignedFrames.length,
+          original: alignedOriginal.length,
+          predicted: alignedPredicted.length
+        });
+      }
+
       return {
-        frames: realData.frames,
-        originalData: realData.original,
-        predictedData: realData.predicted,
-        upperBound: realData.confidence_upper || realData.predicted.map(val => val + 5),
-        lowerBound: realData.confidence_lower || realData.predicted.map(val => val - 5)
+        frames: alignedFrames,
+        originalData: alignedOriginal,
+        predictedData: alignedPredicted,
+        upperBound: alignedUpper,
+        lowerBound: alignedLower
       };
     }
     
@@ -67,17 +107,61 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
         }
       },
       formatter: function(params) {
-        let tooltipContent = `<strong>Frame ${params[0].axisValue}</strong><br/>`;
+        const frameIndex = params[0].axisValue;
+        let tooltipContent = `<strong>Frame ${frameIndex}</strong><br/>`;
+        
+        // Find the data points for this frame
+        let originalValue = null;
+        let predictedValue = null;
+        let upperBound = null;
+        let lowerBound = null;
+        
         params.forEach(param => {
-          if (param.seriesName !== 'Confidence Interval') {
-            tooltipContent += `${param.marker} ${param.seriesName}: ${param.value}°<br/>`;
+          if (param.seriesName === 'Original Data') {
+            originalValue = param.value;
+          } else if (param.seriesName === 'Predicted Data') {
+            predictedValue = param.value;
+          } else if (param.seriesName.includes('Confidence Interval')) {
+            // We have two series with confidence interval in the name for upper and lower bounds
+            if (upperBound === null) {
+              upperBound = param.value;
+            } else {
+              lowerBound = param.value;
+            }
           }
         });
+        
+        // Add original data
+        if (originalValue !== null) {
+          tooltipContent += `<span style="color: #3b82f6;">●</span> <strong>Original:</strong> ${originalValue.toFixed(2)}°<br/>`;
+        }
+        
+        // Add predicted data
+        if (predictedValue !== null) {
+          tooltipContent += `<span style="color: #ef4444;">●</span> <strong>Predicted:</strong> ${predictedValue.toFixed(2)}°<br/>`;
+        }
+        
+        // Add prediction error if both values are available
+        if (originalValue !== null && predictedValue !== null) {
+          const error = Math.abs(originalValue - predictedValue);
+          tooltipContent += `<span style="color: #6b7280;"></span> <strong>Error:</strong> ${error.toFixed(2)}°<br/>`;
+        }
+        
+        // Add confidence interval
+        if (upperBound !== null && lowerBound !== null) {
+          const confidenceLevel = realData?.confidence_level || 95;
+          tooltipContent += `<span style="color: #ef4444; opacity: 0.6;"></span> <strong>${confidenceLevel}% Interval:</strong> [${lowerBound.toFixed(2)}°, ${upperBound.toFixed(2)}°]<br/>`;
+          
+          // Show interval width
+          const intervalWidth = upperBound - lowerBound;
+          tooltipContent += `<span style="color: #9333ea;"></span> <strong>Interval Width:</strong> ${intervalWidth.toFixed(2)}°`;
+        }
+        
         return tooltipContent;
       }
     },
     legend: {
-      data: ['Original Data', 'Predicted Data', 'Confidence Interval'],
+      data: ['Original Data', 'Predicted Data', `${realData?.confidence_level || 95}% Confidence Interval`],
       top: 40,
       left: 'center'
     },
@@ -190,7 +274,7 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
         sampling: 'lttb'
       },
       {
-        name: 'Confidence Interval',
+        name: `${realData?.confidence_level || 95}% Confidence Interval`,
         type: 'line',
         data: chartData.upperBound,
         lineStyle: {
@@ -200,7 +284,7 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
         symbol: 'none'
       },
       {
-        name: 'Confidence Interval',
+        name: `${realData?.confidence_level || 95}% Confidence Interval`,
         type: 'line',
         data: chartData.lowerBound,
         lineStyle: {
@@ -252,7 +336,9 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
       {/* Instructions de navigation */}
       <div className="mt-3 text-xs text-gray-500 text-center">
         💡 <strong>Navigation:</strong> Mouse wheel to zoom • Drag to pan • Use sliders to adjust range on both axes
-        {realData && <span className="text-green-600 font-semibold"> • Using real SARIMAX predictions</span>}
+        <br />
+        🎯 <strong>Hover:</strong> Move mouse over chart to see detailed values, prediction error, and confidence intervals
+        {realData && <span className="text-green-600 font-semibold"> • Using real SARIMAX predictions with {realData.confidence_level || 95}% confidence</span>}
       </div>
     </div>
   );

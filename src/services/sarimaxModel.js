@@ -102,7 +102,9 @@ export class SARIMAXAnalyzer {
       // Step 5: Train model
       if (progressCallback) progressCallback(60, 'Training SARIMAX model...');
       
-      this.model = new SARIMAX(endogTrain, exogTrain, config.lags || 2);
+      // Pass the estimation method from config (default to 'ols' if not specified)
+      const estimationMethod = config.resolver || 'ols';
+      this.model = new SARIMAX(endogTrain, exogTrain, config.lags || 2, estimationMethod);
       this.model.fit();
       
       // Step 6: Create model summary
@@ -112,6 +114,11 @@ export class SARIMAXAnalyzer {
       // Step 7: Generate predictions using static forecasting
       if (progressCallback) progressCallback(80, 'Generating forecasts...');
       
+      const forecastingOptions = {
+        includeConfidence: true,
+        confidenceLevel: config.confidenceLevel || 95
+      };
+      
       const staticResults = staticForecasting(
         this.model, 
         normalizedTestData, 
@@ -119,7 +126,8 @@ export class SARIMAXAnalyzer {
         exogIndices, 
         this.endogScaler,
         targetIndex,
-        config.steps || 1
+        config.steps || 1,
+        forecastingOptions
       );
       
       if (!staticResults || !staticResults.predStatic || !staticResults.origValues) {
@@ -152,16 +160,25 @@ export class SARIMAXAnalyzer {
         steps: config.steps || 1
       };
       
-      // Generate frame indices 
-      const framesArray = Array.from(
+      // Use frame indices from forecasting results instead of generating new ones
+      const framesArray = staticResults.frameIndices || Array.from(
         {length: mainResults.predicted.length}, 
         (_, i) => i + this.model.order
       );
       
-      // Calculate confidence intervals (simplified)
-      const residuals = mainResults.predicted.map((pred, i) => Math.abs(pred - mainResults.origValues[i]));
-      const avgResidual = residuals.reduce((sum, res) => sum + res, 0) / residuals.length;
-      const confidenceInterval = 1.96 * avgResidual; // 95% confidence
+      // Use confidence intervals from forecasting results
+      let confidenceUpper, confidenceLower;
+      if (staticResults.confidence) {
+        confidenceUpper = staticResults.confidence.upper;
+        confidenceLower = staticResults.confidence.lower;
+      } else {
+        // Fallback: Calculate confidence intervals (simplified)
+        const residuals = mainResults.predicted.map((pred, i) => Math.abs(pred - mainResults.origValues[i]));
+        const avgResidual = residuals.reduce((sum, res) => sum + res, 0) / residuals.length;
+        const confidenceInterval = 1.96 * avgResidual; // 95% confidence
+        confidenceUpper = mainResults.predicted.map(val => val + confidenceInterval);
+        confidenceLower = mainResults.predicted.map(val => val - confidenceInterval);
+      }
       
       this.results = {
         targetJoint: config.targetJoint,
@@ -169,12 +186,15 @@ export class SARIMAXAnalyzer {
         frames: framesArray,
         original: mainResults.origValues,
         predicted: mainResults.predicted,
-        confidence_upper: mainResults.predicted.map(val => val + confidenceInterval),
-        confidence_lower: mainResults.predicted.map(val => val - confidenceInterval),
+        confidence_upper: confidenceUpper,
+        confidence_lower: confidenceLower,
+        confidence_level: staticResults.confidence?.level || 95,
+        confidence_se: staticResults.confidence?.se || null,
         metrics: staticMetrics,
         modelSummary: this.formatModelSummary(modelSummaryData, bvhAngles, exogIndices),
         method: mainResults.method,
-        steps: mainResults.steps
+        steps: mainResults.steps,
+        lags: config.lags || 2
       };
 
       if (progressCallback) progressCallback(100, 'Analysis complete!');

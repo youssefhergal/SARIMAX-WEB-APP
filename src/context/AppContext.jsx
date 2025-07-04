@@ -34,7 +34,8 @@ export function AppProvider({ children }) {
     modelParams: {
       lags: 2,  // Start with order 2 like in your main.js
       steps: 1,  // Default to static forecasting (steps=1)
-      resolver: 'ols'  // Default resolver method
+      resolver: 'ols',  // Default resolver method
+      confidenceLevel: 95  // Default 95% confidence level
     }
   });
 
@@ -209,7 +210,9 @@ export function AppProvider({ children }) {
           targetJoint: config.targetJoint,
           targetAxis: config.targetAxis,
           lags: config.modelParams.lags,
-          steps: config.modelParams.steps
+          steps: config.modelParams.steps,
+          resolver: config.modelParams.resolver,  // Add the estimation method
+          confidenceLevel: config.modelParams.confidenceLevel  // Add confidence level
         };
 
         const result = await analyzer.analyze(analysisConfig, progressCallback);

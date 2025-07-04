@@ -320,6 +320,29 @@ function Dashboard() {
                     📊 Currently using OLS - Other methods coming soon
                   </div>
                 </div>
+
+                <div>
+                  <label className="text-xs text-gray-600 mb-1 block">
+                    Confidence Level - Current: {config.modelParams.confidenceLevel || 95}%
+                  </label>
+                  <input 
+                    type="range" 
+                    min="80" 
+                    max="99"
+                    value={config.modelParams.confidenceLevel || 95}
+                    onChange={(e) => updateModelParams({ confidenceLevel: parseInt(e.target.value) })}
+                    className="w-full" 
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>80%</span>
+                    <span>90%</span>
+                    <span>95%</span>
+                    <span>99%</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    📊 Confidence level for prediction intervals
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -370,7 +393,7 @@ function Dashboard() {
                     Train: {analysisData.trainData.frameCount} frames, Test: {analysisData.testData.frameCount} frames
                   </div>
                   <div className="text-xs text-green-600 mt-1">
-                    Target: {config.targetJoint}_{config.targetAxis}, Lags: {config.modelParams.lags}, Steps: {config.modelParams.steps} ({config.modelParams.steps <= 1 ? 'Static' : 'Dynamic'}), Method: {config.modelParams.resolver?.toUpperCase() || 'OLS'}
+                    Target: {config.targetJoint}_{config.targetAxis}, Lags: {config.modelParams.lags}, Steps: {config.modelParams.steps} ({config.modelParams.steps <= 1 ? 'Static' : 'Dynamic'}), Method: {config.modelParams.resolver?.toUpperCase() || 'OLS'}, CI: {config.modelParams.confidenceLevel || 95}%
                   </div>
                 </div>
               ) : (

@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1200" height="800" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1200" height="800" fill="#f8fafc"/>
+  
+  <!-- Title -->
+  <text x="600" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#1f2937">
+    📊 Complete SARIMAX Model Structure
+  </text>
+  
+  <!-- Mathematical Setup Section -->
+  <rect x="50" y="60" width="280" height="200" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="10"/>
+  <text x="190" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#1e40af">
+    🧮 Mathematical Setup
+  </text>
+  
+  <!-- Input Data -->
+  <rect x="70" y="100" width="120" height="40" fill="#ffffff" stroke="#6b7280" stroke-width="1" rx="5"/>
+  <text x="130" y="125" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#374151">
+    📊 Input Data
+  </text>
+  
+  <!-- Endogenous -->
+  <rect x="220" y="90" width="100" height="50" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" rx="5"/>
+  <text x="270" y="108" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">
+    Endogenous y(t)
+  </text>
+  <text x="270" y="122" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">
+    Target Angle
+  </text>
+  <text x="270" y="136" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">
+    Time Series
+  </text>
+  
+  <!-- Exogenous -->
+  <rect x="220" y="150" width="100" height="50" fill="#dcfce7" stroke="#22c55e" stroke-width="1" rx="5"/>
+  <text x="270" y="168" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#166534">
+    Exogenous X(t)
+  </text>
+  <text x="270" y="182" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#166534">
+    Other Angles
+  </text>
+  <text x="270" y="196" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#166534">
+    Matrix
+  </text>
+  
+  <!-- Lagged Variables -->
+  <rect x="70" y="160" width="120" height="40" fill="#fce7f3" stroke="#ec4899" stroke-width="1" rx="5"/>
+  <text x="130" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#be185d">
+    🔄 Create Lagged
+  </text>
+  <text x="130" y="190" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#be185d">
+    Variables
+  </text>
+  
+  <!-- Lagged Output -->
+  <rect x="70" y="210" width="120" height="40" fill="#f3e8ff" stroke="#a855f7" stroke-width="1" rx="5"/>
+  <text x="130" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7c3aed">
+    y(t-1), y(t-2),
+  </text>
+  <text x="130" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#7c3aed">
+    ..., y(t-p)
+  </text>
+  
+  <!-- Current Exogenous -->
+  <rect x="220" y="210" width="100" height="40" fill="#ecfdf5" stroke="#10b981" stroke-width="1" rx="5"/>
+  <text x="270" y="225" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#047857">
+    x1(t), x2(t),
+  </text>
+  <text x="270" y="240" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#047857">
+    ..., xk(t)
+  </text>
+  
+  <!-- Model Training Section -->
+  <rect x="370" y="60" width="280" height="200" fill="#fef2f2" stroke="#ef4444" stroke-width="2" rx="10"/>
+  <text x="510" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#dc2626">
+    🤖 Model Training
+  </text>
+  
+  <!-- Combine Features -->
+  <rect x="390" y="100" width="120" height="40" fill="#ffffff" stroke="#6b7280" stroke-width="1" rx="5"/>
+  <text x="450" y="115" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#374151">
+    🔗 Combine
+  </text>
+  <text x="450" y="130" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#374151">
+    Features
+  </text>
+  
+  <!-- Design Matrix -->
+  <rect x="390" y="150" width="240" height="40" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" rx="5"/>
+  <text x="510" y="165" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">
+    Design Matrix X
+  </text>
+  <text x="510" y="180" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">
+    [x1(t), x2(t), ..., y(t-1), y(t-2)]
+  </text>
+  
+  <!-- Linear Regression -->
+  <rect x="390" y="200" width="120" height="40" fill="#dcfce7" stroke="#22c55e" stroke-width="1" rx="5"/>
+  <text x="450" y="215" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#166534">
+    📈 Linear
+  </text>
+  <text x="450" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#166534">
+    Regression
+  </text>
+  
+  <!-- Beta Calculation -->
+  <rect x="520" y="200" width="120" height="40" fill="#fce7f3" stroke="#ec4899" stroke-width="1" rx="5"/>
+  <text x="580" y="215" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#be185d">
+    β = (X'X + λI)⁻¹
+  </text>
+  <text x="580" y="230" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#be185d">
+    X'y
+  </text>
+  
+  <!-- Statistical Analysis Section -->
+  <rect x="690" y="60" width="230" height="200" fill="#f0fdf4" stroke="#22c55e" stroke-width="2" rx="10"/>
+  <text x="805" y="80" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#15803d">
+    📈 Statistical Analysis
+  </text>
+  
+  <!-- Model Coefficients -->
+  <rect x="710" y="100" width="190" height="50" fill="#ffffff" stroke="#6b7280" stroke-width="1" rx="5"/>
+  <text x="805" y="118" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#374151">
+    🎯 Model Coefficients
+  </text>
+  <text x="805" y="132" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#374151">
+    β_exog: Exogenous coefficients
+  </text>
+  <text x="805" y="146" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#374151">
+    β_ar: Autoregressive coefficients
+  </text>
+  
+  <!-- Statistical Tests -->
+  <rect x="710" y="160" width="90" height="40" fill="#fef3c7" stroke="#f59e0b" stroke-width="1" rx="5"/>
+  <text x="755" y="175" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">
+    📊 Statistical
+  </text>
+  <text x="755" y="190" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#92400e">
+    Tests
+  </text>
+  
+  <!-- Output Stats -->
+  <rect x="810" y="160" width="90" height="40" fill="#dcfce7" stroke="#22c55e" stroke-width="1" rx="5"/>
+  <text x="855" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#166534">
+    Standard Errors
+  </text>
+  <text x="855" y="182" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#166534">
+    T-Statistics
+  </text>
+  <text x="855" y="194" text-anchor="middle" font-family="Arial, sans-serif" font-size="9" fill="#166534">
+    P-Values
+  </text>
+  
+  <!-- Forecasting Section -->
+  <rect x="370" y="300" width="280" height="140" fill="#f8fafc" stroke="#6366f1" stroke-width="2" rx="10"/>
+  <text x="510" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#4338ca">
+    🔮 Forecasting
+  </text>
+  
+  <!-- Prediction Box -->
+  <rect x="390" y="340" width="100" height="40" fill="#ffffff" stroke="#6b7280" stroke-width="1" rx="5"/>
+  <text x="440" y="355" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#374151">
+    🔮 Prediction
+  </text>
+  <text x="440" y="370" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#374151">
+    Process
+  </text>
+  
+  <!-- Prediction Formula -->
+  <rect x="390" y="390" width="240" height="40" fill="#dbeafe" stroke="#3b82f6" stroke-width="1" rx="5"/>
+  <text x="510" y="405" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#1e40af">
+    ŷ(t+1) = Σβ_exog×X(t) + Σβ_ar×y(t-i)
+  </text>
+  <text x="510" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="10" fill="#1e40af">
+    Final Prediction Output
+  </text>
+  
+  <!-- Flow Arrows -->
+  <!-- Input to Endogenous/Exogenous -->
+  <path d="M 190 120 L 220 115" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 190 125 L 220 175" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Endogenous to Lagged -->
+  <path d="M 270 140 Q 270 150 130 160" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Lagged creation -->
+  <path d="M 130 200 L 130 210" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Exogenous to current -->
+  <path d="M 270 200 L 270 210" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- To combine features -->
+  <path d="M 190 230 Q 300 230 390 120" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 320 230 Q 350 230 390 125" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Combine to Design Matrix -->
+  <path d="M 450 140 L 450 150" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Design Matrix to Linear Regression -->
+  <path d="M 450 190 L 450 200" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Linear Regression to Beta -->
+  <path d="M 510 220 L 520 220" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Beta to Coefficients -->
+  <path d="M 640 220 Q 670 220 710 125" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Coefficients to Statistical Tests -->
+  <path d="M 805 150 L 805 160" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Statistical Tests to Output -->
+  <path d="M 800 180 L 810 180" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- To Prediction -->
+  <path d="M 805 200 Q 805 270 440 340" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Prediction to Formula -->
+  <path d="M 440 380 L 440 390" stroke="#374151" stroke-width="2" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#374151"/>
+    </marker>
+  </defs>
+  
+  <!-- Legend -->
+  <rect x="50" y="500" width="900" height="80" fill="#ffffff" stroke="#e5e7eb" stroke-width="1" rx="5"/>
+  <text x="60" y="520" font-family="Arial, sans-serif" font-size="12" font-weight="bold" fill="#374151">
+    Key Features:
+  </text>
+  <text x="60" y="540" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">
+    • Mathematical Setup: Data preparation and feature engineering
+  </text>
+  <text x="60" y="555" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">
+    • Model Training: Linear regression with regularization β = (X'X + λI)⁻¹X'y
+  </text>
+  <text x="60" y="570" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">
+    • Statistical Analysis: Coefficient significance testing (SE, T-stats, P-values)
+  </text>
+  <text x="500" y="540" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">
+    • Forecasting: Prediction generation ŷ(t+1) = Σβ_exog×X(t) + Σβ_ar×y(t-i)
+  </text>
+  <text x="500" y="555" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">
+    • Input: BVH motion capture data (47 exogenous + p lagged endogenous)
+  </text>
+  <text x="500" y="570" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">
+    • Output: Statistical coefficients + significance tests + predictions
+  </text>
+  
+</svg> 
