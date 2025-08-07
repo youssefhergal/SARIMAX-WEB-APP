@@ -3,6 +3,7 @@ import { useApp } from '../context/AppContext';
 import ModelSummaryTable from './ModelSummaryTable';
 import AnglePlot from './AnglePlot';
 
+
 function Dashboard() {
   const { 
     analysisState, 
@@ -14,7 +15,8 @@ function Dashboard() {
     uploadTrainFile, 
     uploadTestFile, 
     clearFiles,
-    analyzeData 
+    analyzeData,
+    retrainModel
   } = useApp();
   
   const trainFileRef = useRef(null);
@@ -42,6 +44,13 @@ function Dashboard() {
 
   const handleAnalyze = async () => {
     const result = await analyzeData();
+    if (!result.success) {
+      alert(result.message);
+    }
+  };
+
+  const handleRetrainModel = async (removedVariables) => {
+    const result = await retrainModel(removedVariables);
     if (!result.success) {
       alert(result.message);
     }
@@ -90,43 +99,123 @@ function Dashboard() {
               <AnglePlot 
                 targetJoint={config.targetJoint}
                 targetAxis={config.targetAxis}
-            analysisType={analysisState.results.method}
+                analysisType={analysisState.results.method}
                 realData={analysisState.results}
+                retrainedData={analysisState.retrainedResults}
               />
             </div>
 
             {/* Model Summary Table */}
             <div className="mb-6">
-              <ModelSummaryTable analysisResults={analysisState.results} />
+              <ModelSummaryTable 
+                analysisResults={analysisState.results} 
+                onRetrainModel={handleRetrainModel}
+              />
             </div>
 
-            {/* Static Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">MSE</div>
-                <div className="text-lg font-semibold text-green-600">
-              {analysisState.results.metrics.mse.toFixed(6)}
+
+
+            {/* Model Metrics Comparison */}
+            {analysisState.retrainedResults ? (
+              <div className="mb-6">
+                <h4 className="text-md font-medium mb-3 text-gray-700">Model Performance Comparison</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <div className="text-sm text-gray-600">MSE</div>
+                    <div className="text-lg font-semibold text-green-600">
+                      {analysisState.results.metrics.mse.toFixed(6)}
+                    </div>
+                    <div className="text-xs text-gray-500">Original</div>
+                    <div className="text-lg font-semibold text-blue-600">
+                      {analysisState.retrainedResults.metrics.mse.toFixed(6)}
+                    </div>
+                    <div className="text-xs text-gray-500">Retrained</div>
+                    <div className={`text-xs ${analysisState.retrainedResults.metrics.mse < analysisState.results.metrics.mse ? 'text-green-600' : 'text-red-600'}`}>
+                      {((analysisState.results.metrics.mse - analysisState.retrainedResults.metrics.mse) / analysisState.results.metrics.mse * 100).toFixed(1)}% change
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <div className="text-sm text-gray-600">MAE</div>
+                    <div className="text-lg font-semibold text-green-600">
+                      {analysisState.results.metrics.mae.toFixed(6)}
+                    </div>
+                    <div className="text-xs text-gray-500">Original</div>
+                    <div className="text-lg font-semibold text-blue-600">
+                      {analysisState.retrainedResults.metrics.mae.toFixed(6)}
+                    </div>
+                    <div className="text-xs text-gray-500">Retrained</div>
+                    <div className={`text-xs ${analysisState.retrainedResults.metrics.mae < analysisState.results.metrics.mae ? 'text-green-600' : 'text-red-600'}`}>
+                      {((analysisState.results.metrics.mae - analysisState.retrainedResults.metrics.mae) / analysisState.results.metrics.mae * 100).toFixed(1)}% change
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <div className="text-sm text-gray-600">U-Theil</div>
+                    <div className="text-lg font-semibold text-green-600">
+                      {analysisState.results.metrics.uTheil.toFixed(6)}
+                    </div>
+                    <div className="text-xs text-gray-500">Original</div>
+                    <div className="text-lg font-semibold text-blue-600">
+                      {analysisState.retrainedResults.metrics.uTheil.toFixed(6)}
+                    </div>
+                    <div className="text-xs text-gray-500">Retrained</div>
+                    <div className={`text-xs ${analysisState.retrainedResults.metrics.uTheil < analysisState.results.metrics.uTheil ? 'text-green-600' : 'text-red-600'}`}>
+                      {((analysisState.results.metrics.uTheil - analysisState.retrainedResults.metrics.uTheil) / analysisState.results.metrics.uTheil * 100).toFixed(1)}% change
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200">
+                    <div className="text-sm text-gray-600">Correlation</div>
+                    <div className="text-lg font-semibold text-green-600">
+                      {analysisState.results.metrics.correlation.toFixed(4)}
+                    </div>
+                    <div className="text-xs text-gray-500">Original</div>
+                    <div className="text-lg font-semibold text-blue-600">
+                      {analysisState.retrainedResults.metrics.correlation.toFixed(4)}
+                    </div>
+                    <div className="text-xs text-gray-500">Retrained</div>
+                    <div className={`text-xs ${analysisState.retrainedResults.metrics.correlation > analysisState.results.metrics.correlation ? 'text-green-600' : 'text-red-600'}`}>
+                      {((analysisState.retrainedResults.metrics.correlation - analysisState.results.metrics.correlation) / analysisState.results.metrics.correlation * 100).toFixed(1)}% change
+                    </div>
+                  </div>
+                </div>
+                {analysisState.retrainedResults.removedVariables && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="text-sm text-red-700">
+                      <strong>Variables removed:</strong> {analysisState.retrainedResults.removedVariables.join(', ')}
+                    </div>
+                    <div className="text-xs text-red-600 mt-1">
+                      Model complexity reduced from {analysisState.results.modelSummary?.variables?.length || 0} to {analysisState.retrainedResults.modelSummary?.variables?.length || 0} variables
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600">MSE</div>
+                  <div className="text-lg font-semibold text-green-600">
+                {analysisState.results.metrics.mse.toFixed(6)}
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600">MAE</div>
+                  <div className="text-lg font-semibold text-blue-600">
+                {analysisState.results.metrics.mae.toFixed(6)}
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600">U-Theil</div>
+                  <div className="text-lg font-semibold text-purple-600">
+                {analysisState.results.metrics.uTheil.toFixed(6)}
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="text-sm text-gray-600">Correlation</div>
+                  <div className="text-lg font-semibold text-green-600">
+                {analysisState.results.metrics.correlation.toFixed(4)}
+                  </div>
                 </div>
               </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">MAE</div>
-                <div className="text-lg font-semibold text-blue-600">
-              {analysisState.results.metrics.mae.toFixed(6)}
-                </div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">U-Theil</div>
-                <div className="text-lg font-semibold text-purple-600">
-              {analysisState.results.metrics.uTheil.toFixed(6)}
-                </div>
-              </div>
-              <div className="bg-white p-4 rounded-lg border border-gray-200">
-                <div className="text-sm text-gray-600">Correlation</div>
-                <div className="text-lg font-semibold text-green-600">
-              {analysisState.results.metrics.correlation.toFixed(4)}
-                </div>
-              </div>
-            </div>
+            )}
           </>
         );
   };
@@ -137,10 +226,21 @@ function Dashboard() {
       <header className="bg-white border-b border-gray-200 px-6 py-4">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-gray-900">
-            🧠 SARIMAX Motion Analysis
+            SARIMAX Motion Analysis
           </h1>
-          <div className="text-sm text-gray-500">
-            Flexible Static/Dynamic Forecasting
+          <div className="flex items-center space-x-4">
+            <div className="text-sm text-gray-500">
+              Flexible Static/Dynamic Forecasting
+            </div>
+            {(analysisState.isAnalyzing || analysisState.isRetraining) && (
+              <div className="flex items-center space-x-2 text-sm">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                <span className="text-blue-600">
+                  {analysisState.isAnalyzing ? 'Analyzing...' : 'Retraining...'}
+                </span>
+                <span className="text-gray-500">({analysisState.progress}%)</span>
+              </div>
+            )}
           </div>
         </div>
       </header>

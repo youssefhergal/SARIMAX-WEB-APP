@@ -15,6 +15,7 @@ export class SARIMAXAnalyzer {
     this.model = null;
     this.scaler = null;
     this.results = null;
+    this.originalResults = null; // Store original results for comparison
   }
 
   setData(trainData, testData) {
@@ -26,6 +27,169 @@ export class SARIMAXAnalyzer {
       trainChannels: trainData?.channels?.length,
       testChannels: testData?.channels?.length
     });
+  }
+
+  // Store original results for comparison
+  storeOriginalResults(results) {
+    this.originalResults = results;
+  }
+
+  // Get original results for comparison
+  getOriginalResults() {
+    return this.originalResults;
+  }
+
+  // New method to retrain model without specific variables
+  async retrainModelWithoutVariables(removedVariables, config, progressCallback = null) {
+    try {
+      console.log('🔄 Retraining model without variables:', removedVariables);
+      
+      if (progressCallback) progressCallback(10, 'Preparing data for retraining...');
+      
+      const targetAngle = `${config.targetJoint}_${config.targetAxis}`;
+      const exogAngles = ALL_BVH_ANGLES.filter(angle => angle !== targetAngle);
+      
+      // Filter out removed variables from exogenous angles
+      const filteredExogAngles = exogAngles.filter(angle => !removedVariables.includes(angle));
+      
+      console.log('📊 Original exogenous variables:', exogAngles.length);
+      console.log('📊 Filtered exogenous variables:', filteredExogAngles.length);
+      console.log('📊 Removed variables:', removedVariables);
+      
+      // Prepare data with filtered variables
+      const trainBvhData = prepareForSARIMAX(this.trainData, targetAngle, filteredExogAngles);
+      const testBvhData = prepareForSARIMAX(this.testData, targetAngle, filteredExogAngles);
+
+      console.log('🔄 Train Bvh Data:', trainBvhData);
+      console.log('🔄 Test Bvh Data:', testBvhData);
+      
+      if (progressCallback) progressCallback(30, 'Normalizing filtered data...');
+      
+      // Create new scalers for the filtered data
+      const endogScaler = new StandardScaler();
+      const exogScaler = new StandardScaler();
+      
+      // Prepare data for scaling
+      const allEndogData = [...trainBvhData.endog, ...testBvhData.endog];
+      const allExogData = [...trainBvhData.exog, ...testBvhData.exog];
+      
+      const endogDataFor2D = allEndogData.map(val => [val]);
+      const exogDataFor2D = allExogData;
+      
+      endogScaler.fit(endogDataFor2D);
+      exogScaler.fit(exogDataFor2D);
+      
+      // Normalize training data
+      const endogTrain = trainBvhData.endog.map(val => endogScaler.transform([[val]])[0][0]);
+      const exogTrain = trainBvhData.exog.map(row => exogScaler.transform([row])[0]);
+      
+      // Normalize test data
+      const normalizedTestData = [];
+      for (let i = 0; i < testBvhData.frameCount; i++) {
+        const normalizedEndog = endogScaler.transform([[testBvhData.endog[i]]])[0][0];
+        const normalizedExog = exogScaler.transform([testBvhData.exog[i]])[0];
+        normalizedTestData.push([normalizedEndog, ...normalizedExog]);
+      }
+      
+      if (progressCallback) progressCallback(50, 'Training retrained SARIMAX model...');
+      
+      // Train new model with filtered data
+      const estimationMethod = config.resolver || 'ols';
+      const retrainedModel = new SARIMAX(endogTrain, exogTrain, config.lags || 2, estimationMethod);
+      retrainedModel.fit();
+      
+      if (progressCallback) progressCallback(70, 'Generating retrained forecasts...');
+      
+      // Generate predictions using static forecasting
+      const forecastingOptions = {
+        includeConfidence: true,
+        confidenceLevel: config.confidenceLevel || 95
+      };
+      
+      // Prepare test data in the format expected by staticForecasting
+      const testData = [];
+      for (let i = 0; i < testBvhData.frameCount; i++) {
+        const row = [testBvhData.endog[i], ...testBvhData.exog[i]];
+        testData.push(row);
+      }
+      
+      const staticResults = staticForecasting(
+        retrainedModel,
+        testData,
+        0, // targetIndex
+        Array.from({length: testBvhData.exog[0].length}, (_, i) => i + 1), // exogIndices
+        endogScaler,
+        0, // targetColumn
+        config.steps || 1,
+        forecastingOptions
+      );
+      
+      if (progressCallback) progressCallback(90, 'Calculating retrained metrics...');
+      
+      // Calculate metrics for retrained model
+      const staticMetrics = {
+        mse: MSE(staticResults.origValues, staticResults.predStatic),
+        mae: MAE(staticResults.origValues, staticResults.predStatic),
+        uTheil: UTheil(staticResults.origValues, staticResults.predStatic),
+        correlation: calculateCorrelation(staticResults.origValues, staticResults.predStatic)
+      };
+      
+      // Create model summary for retrained model
+      const bvhAngles = [targetAngle, ...filteredExogAngles];
+      const exogIndices = Array.from({length: exogTrain[0].length}, (_, i) => i + 1);
+      const modelSummaryData = createModelSummary(retrainedModel, bvhAngles, targetAngle, exogIndices);
+      
+      // Prepare confidence intervals
+      let confidenceUpper, confidenceLower;
+      if (staticResults.confidence) {
+        confidenceUpper = staticResults.confidence.upper;
+        confidenceLower = staticResults.confidence.lower;
+      } else {
+        // Fallback: Calculate confidence intervals
+        const residuals = staticResults.predicted.map((pred, i) => Math.abs(pred - staticResults.origValues[i]));
+        const avgResidual = residuals.reduce((sum, res) => sum + res, 0) / residuals.length;
+        const confidenceInterval = 1.96 * avgResidual;
+        confidenceUpper = staticResults.predicted.map(val => val + confidenceInterval);
+        confidenceLower = staticResults.predicted.map(val => val - confidenceInterval);
+      }
+      
+      // Create frames array
+      const framesArray = Array.from({ length: staticResults.origValues.length }, (_, i) => i + 1);
+      
+      const retrainedResults = {
+        targetJoint: config.targetJoint,
+        targetAxis: config.targetAxis,
+        frames: framesArray,
+        original: staticResults.origValues,
+        predicted: staticResults.predStatic,
+        confidence_upper: confidenceUpper,
+        confidence_lower: confidenceLower,
+        confidence_level: staticResults.confidence?.level || 95,
+        confidence_se: staticResults.confidence?.se || null,
+        metrics: staticMetrics,
+        modelSummary: this.formatModelSummary(modelSummaryData, bvhAngles, exogIndices),
+        method: staticResults.method,
+        steps: staticResults.steps,
+        lags: config.lags || 2,
+        removedVariables: removedVariables // Store which variables were removed
+      };
+      
+      if (progressCallback) progressCallback(100, 'Retraining complete!');
+      
+      return {
+        success: true,
+        results: retrainedResults,
+        originalResults: this.originalResults
+      };
+      
+    } catch (error) {
+      console.error('❌ Retraining Error:', error);
+      return {
+        success: false,
+        error: error.message,
+        results: null
+      };
+    }
   }
 
   async analyze(config, progressCallback = null) {
@@ -51,6 +215,9 @@ export class SARIMAXAnalyzer {
       // Use the utility function to prepare SARIMAX data
       const trainBvhData = prepareForSARIMAX(this.trainData, targetAngle, exogAngles);
       const testBvhData = prepareForSARIMAX(this.testData, targetAngle, exogAngles);
+      
+      console.log('🔄 Train Bvh Data:', trainBvhData);
+      console.log('🔄 Test Bvh Data:', testBvhData);
       
       // Validate extracted data
       if (!trainBvhData || !trainBvhData.endog || !trainBvhData.exog) {
@@ -196,6 +363,9 @@ export class SARIMAXAnalyzer {
         steps: mainResults.steps,
         lags: config.lags || 2
       };
+
+      // Store original results for comparison
+      this.storeOriginalResults(this.results);
 
       if (progressCallback) progressCallback(100, 'Analysis complete!');
       

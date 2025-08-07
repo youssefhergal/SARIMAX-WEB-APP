@@ -18,7 +18,9 @@ export function AppProvider({ children }) {
     progress: 0,
     currentStep: '',
     error: null,
-    results: null
+    results: null,
+    retrainedResults: null,
+    isRetraining: false
   });
 
   const [files, setFiles] = useState({
@@ -176,6 +178,7 @@ export function AppProvider({ children }) {
       setAnalysisState(prev => ({
         ...prev,
         results: null,
+        retrainedResults: null,
         error: null
       }));
     },
@@ -223,7 +226,8 @@ export function AppProvider({ children }) {
             isAnalyzing: false,
             progress: 100,
             currentStep: 'Analysis complete!',
-            results: result.results
+            results: result.results,
+            retrainedResults: null // Clear any previous retrained results
           }));
           
           return { success: true, message: 'Analysis completed successfully!' };
@@ -245,6 +249,81 @@ export function AppProvider({ children }) {
           error: error.message
         }));
         return { success: false, message: `Analysis failed: ${error.message}` };
+      }
+    },
+
+    // Retrain model without specific variables
+    retrainModel: async (removedVariables) => {
+      if (!files.trainParsed || !files.testParsed) {
+        return { success: false, message: 'Please upload and parse both training and test files first' };
+      }
+
+      if (!analysisState.results) {
+        return { success: false, message: 'Please run initial analysis first' };
+      }
+
+      try {
+        const analyzer = new SARIMAXAnalyzer();
+        analyzer.setData(files.trainParsed, files.testParsed);
+        
+        // Store the original results for comparison
+        analyzer.storeOriginalResults(analysisState.results);
+
+        const progressCallback = (progress, step) => {
+          setAnalysisState(prev => ({
+            ...prev,
+            progress,
+            currentStep: step
+          }));
+        };
+
+        setAnalysisState(prev => ({
+          ...prev,
+          isRetraining: true,
+          progress: 0,
+          currentStep: 'Starting model retraining...',
+          error: null
+        }));
+
+        const analysisConfig = {
+          targetJoint: config.targetJoint,
+          targetAxis: config.targetAxis,
+          lags: config.modelParams.lags,
+          steps: config.modelParams.steps,
+          resolver: 'ridge', // FORCE ridge regression for retraining
+          confidenceLevel: config.modelParams.confidenceLevel
+        };
+
+        const result = await analyzer.retrainModelWithoutVariables(removedVariables, analysisConfig, progressCallback);
+        
+        if (result.success) {
+          setAnalysisState(prev => ({
+            ...prev,
+            isRetraining: false,
+            progress: 100,
+            currentStep: 'Retraining complete!',
+            retrainedResults: result.results
+          }));
+          
+          return { success: true, message: 'Model retraining completed successfully!' };
+        } else {
+          setAnalysisState(prev => ({
+            ...prev,
+            isRetraining: false,
+            progress: 0,
+            error: result.error
+          }));
+          return { success: false, message: result.error };
+        }
+      } catch (error) {
+        console.error('❌ Retraining exception:', error);
+        setAnalysisState(prev => ({
+          ...prev,
+          isRetraining: false,
+          progress: 0,
+          error: error.message
+        }));
+        return { success: false, message: `Retraining failed: ${error.message}` };
       }
     }
   };

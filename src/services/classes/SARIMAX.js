@@ -425,4 +425,89 @@ export class SARIMAX {
       bic: this.bic
     };
   }
+
+  // Helper method: Gamma function approximation
+  gamma(z) {
+    // Stirling's approximation for gamma function
+    if (z <= 0) return Infinity;
+    if (z === 1) return 1;
+    if (z === 0.5) return Math.sqrt(Math.PI);
+    
+    return Math.sqrt(2 * Math.PI / z) * Math.pow(z / Math.E, z);
+  }
+
+  // New method: Calculate p-value using numerical integration
+  calculatePValueWithIntegral(t, df) {
+    const absT = Math.abs(t);
+    
+    if (df > 30) {
+      // Normal distribution - integrate normal PDF
+      return this.integrateNormalPDF(absT);
+    } else {
+      // T-distribution - integrate t PDF
+      return this.integrateTDistributionPDF(absT, df);
+    }
+  }
+  
+  // Integrate normal PDF from t to infinity (one tail)
+  integrateNormalPDF(t) {
+    // Normal PDF: f(x) = (1/√(2π)) * e^(-x²/2)
+    // We need: ∫ f(x) dx from t to ∞
+    
+    const steps = 1000;
+    const stepSize = 0.01;
+    let integral = 0;
+    
+    for (let i = 0; i < steps; i++) {
+      const x = t + i * stepSize;
+      const pdf = (1 / Math.sqrt(2 * Math.PI)) * Math.exp(-x * x / 2);
+      integral += pdf * stepSize;
+    }
+    
+    // Two-tailed test
+    return 2 * integral;
+  }
+  
+  // Integrate t-distribution PDF from t to infinity (one tail)
+  integrateTDistributionPDF(t, df) {
+    // T-distribution PDF: f(x) = Γ((df+1)/2) / (√(df*π) * Γ(df/2)) * (1 + x²/df)^(-(df+1)/2)
+    
+    const steps = 1000;
+    const stepSize = 0.01;
+    let integral = 0;
+    
+    // Pre-calculate gamma values
+    const gammaNumerator = this.gamma((df + 1) / 2);
+    const gammaDenominator = this.gamma(df / 2);
+    const constant = gammaNumerator / (Math.sqrt(df * Math.PI) * gammaDenominator);
+    
+    for (let i = 0; i < steps; i++) {
+      const x = t + i * stepSize;
+      const pdf = constant * Math.pow(1 + x * x / df, -(df + 1) / 2);
+      integral += pdf * stepSize;
+    }
+    
+    // Two-tailed test
+    return 2 * integral;
+  }
+  
+  // Enhanced p-value calculation using integrals
+  calculatePValuesWithIntegrals() {
+    if (!this.trained) throw new Error("Model not trained");
+    
+    const n = this.residuals.length;
+    const k = this.coefficients.length;
+    const df = n - k;
+    
+    return this.tStats.map(t => {
+      try {
+        return this.calculatePValueWithIntegral(t, df);
+      } catch (e) {
+        console.log('Error in integral calculation for t-stat:', t, e.message);
+        return 0.999;
+      }
+    });
+  }
+
+  // Method to get residual diagnostics for plotting
 } 

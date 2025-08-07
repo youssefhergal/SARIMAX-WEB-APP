@@ -16,7 +16,7 @@ import ReactECharts from 'echarts-for-react';
  * - Dynamic confidence level display (80%, 90%, 95%, 99%)
  * - Interactive zoom and pan controls
  */
-const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData = null }) => {
+const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData = null, retrainedData = null }) => {
   // Générer des données synthétiques ou utiliser les vraies données
   const chartData = useMemo(() => {
     // Si nous avons des vraies données, les utiliser
@@ -26,11 +26,70 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
       // Slice arrays to align with predictions
       const alignedFrames = realData.frames.slice(lag);
       const alignedOriginal = realData.original.slice(lag);
-      const alignedPredicted = realData.predicted;
-      const alignedUpper = realData.confidence_upper ? realData.confidence_upper : alignedPredicted.map(val => val + 5);
-      const alignedLower = realData.confidence_lower ? realData.confidence_lower : alignedPredicted.map(val => val - 5);
+      let alignedPredicted = realData.predicted;
+      
+      // Fix time shift by aligning predictions with original data
+      // The model predicts future values, so we need to shift predictions back
+      // Time shift pattern: lags + 2 (2 lags = 4 shift, 3 lags = 5 shift, etc.)
+      const timeShift = lag + 2;
+      console.log(`🔧 Fixing time shift: lags=${lag}, shifting predictions back by ${timeShift} frames`);
+      console.log(`🔧 Debug: lag=${lag}, timeShift=${timeShift}, predicted length before shift=${alignedPredicted.length}`);
+      
+      if (alignedPredicted.length > timeShift) {
+        // Shift predictions back by removing first few values
+        alignedPredicted = alignedPredicted.slice(timeShift);
+        console.log(`🔧 Debug: After shift, predicted length=${alignedPredicted.length}`);
+      } else {
+        console.log(`🔧 Warning: Cannot shift by ${timeShift}, predicted length=${alignedPredicted.length}`);
+      }
+      
+      // Fix data length mismatch by trimming predicted to match original
+      if (alignedPredicted.length > alignedOriginal.length) {
+        const extraLength = alignedPredicted.length - alignedOriginal.length;
+        console.log(`🔧 Fixing data length mismatch: trimming ${extraLength} extra values from predictions`);
+        alignedPredicted = alignedPredicted.slice(0, alignedOriginal.length);
+      } else if (alignedPredicted.length < alignedOriginal.length) {
+        const missingLength = alignedOriginal.length - alignedPredicted.length;
+        console.log(`🔧 Fixing data length mismatch: adding ${missingLength} zeros to predictions`);
+        // Add zeros to match original length
+        for (let i = 0; i < missingLength; i++) {
+          alignedPredicted.push(0);
+        }
+      }
+      
+      // Handle confidence intervals with proper alignment
+      let alignedUpper, alignedLower;
+      
+      if (realData.confidence_upper && realData.confidence_lower) {
+        // Use real confidence intervals from the model
+        console.log('📊 Using real confidence intervals from model');
+        let upper = realData.confidence_upper;
+        let lower = realData.confidence_lower;
+        
+        // Apply the same time shift to confidence intervals
+        if (upper.length > timeShift) {
+          upper = upper.slice(timeShift);
+          lower = lower.slice(timeShift);
+        }
+        
+        // Apply the same length trimming as predictions
+        if (upper.length > alignedOriginal.length) {
+          const extraLength = upper.length - alignedOriginal.length;
+          upper = upper.slice(0, alignedOriginal.length);
+          lower = lower.slice(0, alignedOriginal.length);
+        }
+        
+        alignedUpper = upper;
+        alignedLower = lower;
+      } else {
+        // Fallback: create simple confidence intervals
+        console.log('📊 Using fallback confidence intervals (±5 degrees)');
+        alignedUpper = alignedPredicted.map(val => val + 5);
+        alignedLower = alignedPredicted.map(val => val - 5);
+      }
 
       // Debug logging
+      /*
       console.log('🔍 AnglePlot Debug - Real Data Structure:');
       console.log('Lag:', lag);
       console.log('Frames:', alignedFrames.slice(0, 10), '...');
@@ -38,18 +97,79 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
       console.log('Predicted:', alignedPredicted.slice(0, 10), '...');
       console.log('Data length:', alignedFrames.length);
       console.log('Frame range:', alignedFrames[0], 'to', alignedFrames[alignedFrames.length - 1]);
+      
+      // Show alignment check for ALL frames
+      console.log('🔍 ALIGNMENT CHECK (ALL frames):');
+      for (let i = 0; i < Math.min(alignedOriginal.length, alignedPredicted.length); i++) {
+        console.log(`Frame ${alignedFrames[i]}: Original=${alignedOriginal[i].toFixed(2)}, Predicted=${alignedPredicted[i].toFixed(2)}`);
+      }
+
+      
+      
+      // Print frame counts
+      console.log('📊 FRAME COUNTS:');
+      console.log(`📈 Predicted frames: ${alignedPredicted.length}`);
+      console.log(`📊 Original frames: ${alignedOriginal.length}`);
+      console.log(`🎯 Frame indices: ${alignedFrames.length}`);
+      console.log(`📊 Confidence intervals: ${alignedUpper.length} upper, ${alignedLower.length} lower`);
+
+
+      */
+      
+      // Show confidence interval info
+      if (realData.confidence_upper && realData.confidence_lower) {
+        console.log(`📊 Confidence level: ${realData.confidence_level || 95}%`);
+        console.log(`📊 ALL CONFIDENCE INTERVALS:`);
+        for (let i = 0; i < alignedUpper.length; i++) {
+          console.log(`  Frame ${alignedFrames[i]}: Prediction=${alignedPredicted[i].toFixed(2)}, Interval=[${alignedLower[i].toFixed(2)}, ${alignedUpper[i].toFixed(2)}], Width=${(alignedUpper[i] - alignedLower[i]).toFixed(2)}`);
+        }
+      } else {
+        console.log(`📊 FALLBACK CONFIDENCE INTERVALS (±5 degrees):`);
+        for (let i = 0; i < alignedUpper.length; i++) {
+          console.log(`  Frame ${alignedFrames[i]}: Prediction=${alignedPredicted[i].toFixed(2)}, Interval=[${alignedLower[i].toFixed(2)}, ${alignedUpper[i].toFixed(2)}], Width=${(alignedUpper[i] - alignedLower[i]).toFixed(2)}`);
+        }
+      }
+      
+      // Check if data lengths are now aligned
       if (alignedFrames.length !== alignedOriginal.length || alignedFrames.length !== alignedPredicted.length) {
-        console.warn('⚠️ Data length mismatch:', {
+        console.warn('⚠️ Data length mismatch after fixing:', {
           frames: alignedFrames.length,
           original: alignedOriginal.length,
           predicted: alignedPredicted.length
         });
+      } else {
+        console.log('✅ Data lengths are now aligned!');
+      }
+
+      // Prepare retrained data if available
+      let retrainedPredicted = null;
+      if (retrainedData && retrainedData.predicted) {
+        let alignedRetrained = retrainedData.predicted;
+        
+        // Apply the same time shift to retrained predictions
+        if (alignedRetrained.length > timeShift) {
+          alignedRetrained = alignedRetrained.slice(timeShift);
+        }
+        
+        // Apply the same length trimming as original predictions
+        if (alignedRetrained.length > alignedOriginal.length) {
+          alignedRetrained = alignedRetrained.slice(0, alignedOriginal.length);
+        } else if (alignedRetrained.length < alignedOriginal.length) {
+          const missingLength = alignedOriginal.length - alignedRetrained.length;
+          for (let i = 0; i < missingLength; i++) {
+            alignedRetrained.push(0);
+          }
+        }
+        
+        retrainedPredicted = alignedRetrained;
+        console.log('🔄 Retrained predictions prepared:', retrainedPredicted.length, 'frames');
       }
 
       return {
         frames: alignedFrames,
         originalData: alignedOriginal,
         predictedData: alignedPredicted,
+        retrainedPredicted: retrainedPredicted,
         upperBound: alignedUpper,
         lowerBound: alignedLower
       };
@@ -85,13 +205,13 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
       upperBound,
       lowerBound
     };
-  }, [targetJoint, targetAxis, realData]);
+  }, [targetJoint, targetAxis, realData, retrainedData]);
 
   // Configuration du graphique ECharts
   const chartOptions = useMemo(() => ({
     title: {
       text: `${analysisType === 'static' ? 'Static' : 'Dynamic'} Forecasting`,
-      subtext: `${targetJoint}_${targetAxis} Angle Analysis ${realData ? '(Real Data)' : '(Synthetic Data)'}`,
+      subtext: `${targetJoint}_${targetAxis} Angle Analysis ${realData ? '(Real Data)' : '(Synthetic Data)'}${retrainedData ? ' with Retrained Model' : ''}`,
       left: 'center',
       textStyle: {
         fontSize: 16,
@@ -113,6 +233,7 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
         // Find the data points for this frame
         let originalValue = null;
         let predictedValue = null;
+        let retrainedValue = null;
         let upperBound = null;
         let lowerBound = null;
         
@@ -121,6 +242,8 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
             originalValue = param.value;
           } else if (param.seriesName === 'Predicted Data') {
             predictedValue = param.value;
+          } else if (param.seriesName === 'Retrained Model') {
+            retrainedValue = param.value;
           } else if (param.seriesName.includes('Confidence Interval')) {
             // We have two series with confidence interval in the name for upper and lower bounds
             if (upperBound === null) {
@@ -141,10 +264,21 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
           tooltipContent += `<span style="color: #ef4444;">●</span> <strong>Predicted:</strong> ${predictedValue.toFixed(2)}°<br/>`;
         }
         
+        // Add retrained data
+        if (retrainedValue !== null) {
+          tooltipContent += `<span style="color: #10b981;">●</span> <strong>Retrained:</strong> ${retrainedValue.toFixed(2)}°<br/>`;
+        }
+        
         // Add prediction error if both values are available
         if (originalValue !== null && predictedValue !== null) {
           const error = Math.abs(originalValue - predictedValue);
-          tooltipContent += `<span style="color: #6b7280;"></span> <strong>Error:</strong> ${error.toFixed(2)}°<br/>`;
+          tooltipContent += `<span style="color: #6b7280;"></span> <strong>Original Error:</strong> ${error.toFixed(2)}°<br/>`;
+        }
+        
+        // Add retrained error if available
+        if (originalValue !== null && retrainedValue !== null) {
+          const retrainedError = Math.abs(originalValue - retrainedValue);
+          tooltipContent += `<span style="color: #6b7280;"></span> <strong>Retrained Error:</strong> ${retrainedError.toFixed(2)}°<br/>`;
         }
         
         // Add confidence interval
@@ -161,7 +295,9 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
       }
     },
     legend: {
-      data: ['Original Data', 'Predicted Data', `${realData?.confidence_level || 95}% Confidence Interval`],
+      data: chartData.retrainedPredicted 
+        ? ['Original Data', 'Predicted Data', 'Retrained Model', `${realData?.confidence_level || 95}% Confidence Interval`]
+        : ['Original Data', 'Predicted Data', `${realData?.confidence_level || 95}% Confidence Interval`],
       top: 40,
       left: 'center'
     },
@@ -273,6 +409,21 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
         symbol: 'none',
         sampling: 'lttb'
       },
+      // Add retrained model series if available
+      ...(chartData.retrainedPredicted ? [{
+        name: 'Retrained Model',
+        type: 'line',
+        data: chartData.retrainedPredicted,
+        lineStyle: {
+          color: '#10b981',
+          width: 2
+        },
+        itemStyle: {
+          color: '#10b981'
+        },
+        symbol: 'none',
+        sampling: 'lttb'
+      }] : []),
       {
         name: `${realData?.confidence_level || 95}% Confidence Interval`,
         type: 'line',
@@ -291,7 +442,8 @@ const AnglePlot = ({ targetJoint, targetAxis, analysisType = 'static', realData 
           opacity: 0
         },
         areaStyle: {
-          color: 'rgba(239, 68, 68, 0.1)'
+          color: 'rgba(34, 197, 94, 0.3)',
+          opacity: 0.3
         },
         stack: 'confidence-band',
         symbol: 'none'
